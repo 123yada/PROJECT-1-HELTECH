@@ -883,91 +883,112 @@ def analyze_symptoms(data: SymptomInput, db: sqlite3.Connection = Depends(get_db
     has_cramps = any(k in all_context_text for k in ["cramp", "diarrhea", "loose motion", "vomit", "food poison", "nausea"])
     has_migraine = any(k in all_context_text for k in ["migraine", "one side", "throbbing", "light sensitive", "nausea with headache"])
 
-    # ── Category / Symptom Trees ──────────────────────────────
-    if any(k in all_context_text for k in ["fever", "temperature", "pyrexia", "bukhar", "hot body"]):
-        possible_conditions.extend(["Acute Viral Fever", "Seasonal Infection", "Flu Syndrome"])
+    # ── 1. Fever ───────────────────────────────────────────────
+    if any(k in all_context_text for k in ["fever", "temperature", "pyrexia", "bukhar", "hot body", "high temp"]):
+        possible_conditions.extend(["Acute Viral Fever", "Seasonal Pyrexia", "Mild Febrile Episode"])
         if is_high_fever or is_long_duration:
-            advice_parts.append("🌡️ <strong>High / Persistent Fever Assessment:</strong> Since your fever is high or has persisted, we strongly advise consulting our General Physician. Keep yourself hydrated with oral fluids and light meals. Maintain regular temperature charting.")
+            advice_parts.append("🌡️ <strong>Fever Assessment:</strong> Since your fever is high or has persisted, keep yourself well-hydrated with oral fluids, rest in a cool ventilated room, and maintain regular temperature records.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em> (or Dolo 650) helps control mild to moderate temperature.")
             rec_doctor_id = "DOC-201"
             follow_up_questions = ["Fever is above 101°F with chills", "Having weakness and body pain", "Fever started today"]
         else:
-            advice_parts.append("🌡️ <strong>Fever Management:</strong> Stay well-hydrated with warm water or electrolyte fluids. Ensure adequate bed rest. OTC anti-pyretics like <em>Dolo 650</em> or <em>Paracetamol 500mg</em> can help manage mild temperature.")
-            follow_up_questions = ["Fever has lasted more than 2 days", "Also have shivering and chills", "Cough and throat pain present"]
-        
-        matched_med_names.extend(["Dolo 650", "Paracetamol 500mg", "Astra-Zen Clear"])
+            advice_parts.append("🌡️ <strong>Fever Management:</strong> Stay well-hydrated with warm water or electrolyte fluids. Ensure adequate bed rest.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em> (or Dolo 650) helps manage mild to moderate fever.")
+            follow_up_questions = ["Fever has lasted more than 2 days", "Also have shivering and chills", "Body aches present with fever"]
+        matched_med_names.extend(["Paracetamol 500mg", "Dolo 650"])
         rec_doctor_id = "DOC-201"
 
-    if any(k in all_context_text for k in ["headache", "head pain", "migraine", "sar dard", "throbbing head"]):
+    # ── 2. Headache ────────────────────────────────────────────
+    elif any(k in all_context_text for k in ["headache", "head pain", "sar dard", "migraine", "forehead pain", "temple pain", "throbbing head"]):
         if has_migraine:
             possible_conditions.extend(["Migraine Cephalea", "Vascular Headache"])
-            advice_parts.append("🧠 <strong>Migraine Care:</strong> Rest in a darkened, silent room. Apply cold compresses over your forehead and avoid bright screens. <em>Neuro-Sync</em> or <em>PainAway Pro</em> can assist in acute relief.")
+            advice_parts.append("🧠 <strong>Migraine Care:</strong> Rest in a quiet, dimly lit room. Apply cold compresses over your forehead and avoid bright screen glare.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em>; <em>Ibuprofen</em> (e.g. PainAway Pro) may be an option for some adults with inflammatory tension.")
             rec_doctor_id = "DOC-104"
             follow_up_questions = ["Throbbing pain on one side of head", "Triggered by screen time / stress", "Accompanied by nausea"]
         else:
             possible_conditions.extend(["Tension Headache", "Stress / Fatigue Cephalea", "Sinus Headache"])
-            advice_parts.append("🧠 <strong>Headache & Tension Relief:</strong> Ensure sufficient water intake and gentle neck relaxation. Gentle temple massage and fast-acting <em>Crocin Advance</em> can help relieve pressure.")
+            advice_parts.append("🧠 <strong>Headache & Tension Relief:</strong> Ensure sufficient water intake, gentle neck relaxation, and take a screen break.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em> (e.g. Crocin Advance / Paracetamol); <em>Ibuprofen</em> (PainAway Pro) may be an option for some adults.")
             rec_doctor_id = "DOC-203"
             follow_up_questions = ["Tight band feeling around head", "Pain behind the eyes", "Occurring after long working hours"]
-        
-        matched_med_names.extend(["Crocin Advance", "Neuro-Sync", "PainAway Pro"])
+        matched_med_names.extend(["Paracetamol 500mg", "Crocin Advance", "PainAway Pro"])
 
-    if any(k in all_context_text for k in ["cold", "cough", "sore throat", "runny nose", "sneezing", "congestion", "phlegm", "khasi"]):
-        possible_conditions.extend(["Upper Respiratory Tract Infection", "Allergic Rhinitis", "Bronchial Irritation"])
-        if "dry" in all_context_text:
-            advice_parts.append("🫁 <strong>Dry Cough & Throat Care:</strong> Inhale steam 2-3 times daily. Honey with warm water and <em>Astra-Zen Clear</em> provides soothing anti-inflammatory action for nasal and throat irritation.")
-        elif "phlegm" in all_context_text or "wet" in all_context_text or "productive" in all_context_text:
-            advice_parts.append("🫁 <strong>Productive Cough & Congestion:</strong> Drink warm herbal fluids to thin secretions. Consult a doctor if mucus is discolored or chest tightness develops.")
-            rec_doctor_id = "DOC-205"
+    # ── 3. Sore Throat ─────────────────────────────────────────
+    elif any(k in all_context_text for k in ["sore throat", "throat pain", "gala dard", "pharyngitis", "tonsil", "swallowing pain", "throat irritation", "scratchy throat"]):
+        possible_conditions.extend(["Acute Pharyngitis", "Throat Irritation", "Viral Throat Inflammation"])
+        advice_parts.append("🧣 <strong>Sore Throat Care:</strong> Gargle with warm salt water every 3–4 hours to soothe mucosal swelling and drink soothing warm fluids like herbal tea.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em> for pain and fever relief; other treatment depends on the underlying cause (viral vs. bacterial — avoid routine antibiotics unless clinically confirmed).")
+        rec_doctor_id = "DOC-113"
+        follow_up_questions = ["Severe pain when swallowing", "White spots visible on tonsils", "Started with mild sneezing and cold"]
+        matched_med_names.extend(["Paracetamol 500mg", "Astra-Zen Clear"])
+
+    # ── 4. Cough (Dry vs Productive) ───────────────────────────
+    elif any(k in all_context_text for k in ["cough", "khasi", "dry cough", "wet cough", "phlegm", "productive cough", "hacking cough"]):
+        is_dry = any(k in all_context_text for k in ["dry", "hacking", "scratchy", "tickle"])
+        is_wet = any(k in all_context_text for k in ["wet", "phlegm", "mucus", "productive", "chest congestion", "balgam"])
+        
+        possible_conditions.extend(["Acute Bronchial Irritation", "Tracheobronchial Cough", "Post-Viral Cough"])
+        
+        if is_dry:
+            advice_parts.append("🫁 <strong>Dry Cough Guidance:</strong> Inhale steam 2–3 times daily and take warm water with honey. Avoid dusty or dry air environments.<br><br>💊 <strong>Example Medicine Information:</strong> Treatment depends on whether it is dry/productive and the cause. Demulcent soothing agents (<em>Astra-Zen Clear</em>) and hydration provide comfort.")
+            follow_up_questions = ["Cough is worse at night when lying down", "Scratchy dry sensation in throat", "Lasted more than a week"]
+        elif is_wet:
+            advice_parts.append("🫁 <strong>Productive / Wet Cough Guidance:</strong> Drink plenty of warm fluids to thin mucus secretions. Avoid cough suppressants that block natural clearing of airway secretions.<br><br>💊 <strong>Example Medicine Information:</strong> Treatment depends on whether it is dry/productive and the cause. Adequate hydration helps mobilize mucus; consult a doctor if green/yellow sputum occurs.")
+            follow_up_questions = ["Coughing up yellow or greenish mucus", "Feeling chest congestion or wheezing", "Accompanied by mild fever"]
         else:
-            advice_parts.append("🫁 <strong>Cold & Airway Relief:</strong> Gargle with warm salt water twice daily. <em>AllerShield</em> (Cetirizine 10mg) relieves sneezing and runny nose effectively.")
-        
-        matched_med_names.extend(["Astra-Zen Clear", "AllerShield", "Paracetamol 500mg"])
-        rec_doctor_id = "DOC-205"
-        follow_up_questions = ["It is a dry hacking cough", "Producing thick yellow/green phlegm", "Severe sore throat while swallowing"]
+            advice_parts.append("🫁 <strong>Cough Care:</strong> Inhale steam and drink warm fluids throughout the day.<br><br>💊 <strong>Example Medicine Information:</strong> Treatment depends on whether it is dry/productive and the cause. Demulcent syrups for dry cough; hydration and expectoration for productive cough.")
+            follow_up_questions = ["It is a dry tickling cough", "Producing mucus or phlegm", "Accompanied by throat pain"]
+            
+        matched_med_names.extend(["Astra-Zen Clear", "Paracetamol 500mg"])
+        rec_doctor_id = "DOC-110"
 
-    if any(k in all_context_text for k in ["stomach", "abdomen", "pet dard", "acidity", "gastric", "gas", "indigestion", "bloating", "diarrhea", "vomit", "cramps"]):
+    # ── 5. Cold ────────────────────────────────────────────────
+    elif any(k in all_context_text for k in ["cold", "runny nose", "sneezing", "rhinitis", "blocked nose", "nasal congestion", "zukam"]):
+        possible_conditions.extend(["Upper Respiratory Viral Rhinitis", "Common Cold", "Nasal Congestion"])
+        advice_parts.append("🤧 <strong>Cold & Nasal Congestion Care:</strong> Inhale gentle steam, rest adequately, and drink warm liquids. Use saline nasal rinses if blocked.<br><br>💊 <strong>Example Medicine Information:</strong> Symptom-specific treatment (e.g. <em>AllerShield</em> / Cetirizine 10mg for sneezing and runny nose); <strong>avoid automatically prescribing antibiotics</strong> since common colds are viral.")
+        rec_doctor_id = "DOC-205"
+        follow_up_questions = ["Constant sneezing and watery eyes", "Stuffy nose with mild headache", "Started after weather change"]
+        matched_med_names.extend(["AllerShield", "Astra-Zen Clear"])
+
+    # ── 6. Body Pain & Muscle Aches ───────────────────────────
+    elif any(k in all_context_text for k in ["body pain", "body ache", "muscle pain", "muscle ache", "badan dard", "joint pain", "back pain", "knee pain", "fatigue", "weakness", "tiredness"]):
+        possible_conditions.extend(["Generalized Myalgia", "Musculoskeletal Strain", "Viral Fatigue Syndrome"])
+        advice_parts.append("💪 <strong>Body Pain & Muscle Recovery:</strong> Rest overworked muscle groups, apply warm compresses, and ensure adequate fluid and electrolyte intake.<br><br>💊 <strong>Example Medicine Information:</strong> <em>Paracetamol 500 mg</em>; <em>Ibuprofen</em> (e.g. PainAway Pro) may be suitable for some people, or topical soothing recovery gels like <em>Gravity-Fix</em>.")
+        rec_doctor_id = "DOC-107"
+        follow_up_questions = ["Muscle soreness after physical work", "Generalized body ache with fatigue", "Joint pain and morning stiffness"]
+        matched_med_names.extend(["Paracetamol 500mg", "PainAway Pro", "Gravity-Fix", "VitaCore Plus"])
+
+    # ── 7. Stomach Pain & Acidity ──────────────────────────────
+    elif any(k in all_context_text for k in ["stomach", "abdomen", "pet dard", "acidity", "gastric", "gas", "indigestion", "bloating", "diarrhea", "vomit", "cramps", "heartburn"]):
         if has_acidity:
-            possible_conditions.extend(["Acute Gastric Hyperacidity", "GERD / Heartburn", "Dyspepsia"])
-            advice_parts.append("🫄 <strong>Gastric & Acid Reflux Guidance:</strong> Avoid spicy, oily food and carbonated drinks. Do not lie down immediately after meals. Antacid formulations like <em>Digene Gel</em> provide fast heartburn neutralization.")
+            possible_conditions.extend(["Acute Gastric Hyperacidity", "GERD / Heartburn", "Acid Dyspepsia"])
+            advice_parts.append("🫄 <strong>Gastric & Acid Reflux Guidance:</strong> Avoid spicy, oily food and carbonated drinks. Avoid lying down immediately after meals.<br><br>💊 <strong>Example Medicine Information:</strong> Antacids (e.g. <em>Digene Gel</em>) provide fast heartburn neutralization.")
             rec_doctor_id = "DOC-202"
             follow_up_questions = ["Burning sensation in upper chest/stomach", "Worse after spicy or late dinner", "Bloating and frequent burping"]
-        elif has_cramps:
-            possible_conditions.extend(["Acute Gastroenteritis", "Food-Borne Indigestion", "Spasmodic Enteritis"])
-            advice_parts.append("🫄 <strong>Stomach Cramps & Digestive Care:</strong> Sip oral rehydration solution (ORS) continuously. Eat bland foods like curd rice and bananas. Consult our specialist if vomiting or cramping persists.")
-            rec_doctor_id = "DOC-206"
-            follow_up_questions = ["Severe stomach cramps and loose stools", "Started after eating restaurant/outside food", "Mild bloating after lunch"]
+            matched_med_names.extend(["Digene Gel", "VitaCore Plus"])
         else:
-            possible_conditions.extend(["Functional Dyspepsia", "Digestive Imbalance", "Abdominal Discomfort"])
-            advice_parts.append("🫄 <strong>Digestive Support:</strong> Drink plenty of warm water. Avoid heavy dairy or fried meals.")
-            rec_doctor_id = "DOC-202"
-            follow_up_questions = ["Feeling bloated with gas", "Stomach pain on empty stomach", "Nausea after meals"]
-        
-        matched_med_names.extend(["Digene Gel", "VitaCore Plus"])
+            possible_conditions.extend(["Acute Gastroenteritis", "Food-Borne Indigestion", "Functional Dyspepsia"])
+            advice_parts.append("🫄 <strong>Stomach & Digestive Care:</strong> Sip oral rehydration solution (ORS) continuously. Eat bland foods like curd rice and bananas. Consult a doctor if vomiting or cramping persists.<br><br>💊 <strong>Example Medicine Information:</strong> Oral Rehydration Salts (ORS) for fluid recovery, and antacids or digestive formulations under medical guidance.")
+            rec_doctor_id = "DOC-206"
+            follow_up_questions = ["Stomach cramps after meals", "Feeling bloated with gas", "Nausea after eating outside food"]
+            matched_med_names.extend(["Digene Gel", "VitaCore Plus"])
 
-    if any(k in all_context_text for k in ["body pain", "body ache", "muscle pain", "joint pain", "back pain", "knee pain", "weakness", "fatigue", "tiredness"]):
-        possible_conditions.extend(["Myalgia / Muscle Strain", "Viral Fatigue Syndrome", "Post-Stress Body Pain"])
-        advice_parts.append("💪 <strong>Body Ache & Muscle Recovery:</strong> Apply topical pain relief gel like <em>Gravity-Fix</em> to tight muscle groups. Rest your limbs and stay hydrated. <em>VitaCore Plus</em> helps restore metabolic vitality.")
-        matched_med_names.extend(["Gravity-Fix", "PainAway Pro", "VitaCore Plus"])
-        rec_doctor_id = "DOC-203"
-        follow_up_questions = ["Generalized fatigue with fever", "Muscle soreness after physical work", "Joint pain and morning stiffness"]
-
-    if any(k in all_context_text for k in ["skin", "rash", "itching", "hives", "redness", "allergy", "khujli"]):
-        possible_conditions.extend(["Allergic Urticaria", "Contact Dermatitis", "Skin Allergy"])
-        advice_parts.append("🧴 <strong>Skin & Allergy Guidance:</strong> Avoid scratching or harsh chemical soaps. Apply cool compresses. <em>AllerShield</em> (Cetirizine 10mg) effectively controls itching and hives.")
+    # ── 8. Skin & Allergy ──────────────────────────────────────
+    elif any(k in all_context_text for k in ["skin", "rash", "itching", "hives", "redness", "allergy", "khujli"]):
+        possible_conditions.extend(["Allergic Urticaria", "Contact Dermatitis", "Skin Rash"])
+        advice_parts.append("🧴 <strong>Skin & Allergy Guidance:</strong> Avoid scratching or harsh chemical soaps. Apply cool soothing compresses.<br><br>💊 <strong>Example Medicine Information:</strong> Antihistamines like <em>AllerShield</em> (Cetirizine 10mg) effectively control itching and hives.")
         matched_med_names.extend(["AllerShield"])
         rec_doctor_id = "DOC-106"
         follow_up_questions = ["Red itchy patches on arms/legs", "Started after new soap/food", "Mild seasonal itching"]
 
-    if any(k in all_context_text for k in ["anxiety", "stress", "panic", "sleep", "insomnia", "nervous", "tension"]):
+    # ── 9. Anxiety & Mental Wellness ───────────────────────────
+    elif any(k in all_context_text for k in ["anxiety", "stress", "panic", "sleep", "insomnia", "nervous", "tension"]):
         possible_conditions.extend(["Stress-Induced Tension", "Sleep Disruption / Insomnia", "Mild Anxiety"])
-        advice_parts.append("🧘 <strong>Mental Wellness Guidance:</strong> Practice slow 4-7-8 breathing exercises and limit evening caffeine and screen blue light. <em>CalmWave</em> (Ashwagandha & L-Theanine) supports natural relaxation.")
+        advice_parts.append("🧘 <strong>Mental Wellness Guidance:</strong> Practice slow 4-7-8 breathing exercises and limit evening caffeine and screen blue light.<br><br>💊 <strong>Example Medicine Information:</strong> Relaxation and stress management support, including herbal formulations like <em>CalmWave</em> (Ashwagandha & L-Theanine).")
         matched_med_names.extend(["CalmWave"])
         rec_doctor_id = "DOC-108"
         follow_up_questions = ["Trouble falling asleep at night", "Feeling anxious during work", "Waking up tired in morning"]
 
-    if any(k in all_context_text for k in ["diabetes", "sugar", "glucose", "thirst", "polyuria"]):
-        possible_conditions.extend(["Glycemic Fluctuation", "Pre-diabetes Care"])
-        advice_parts.append("🩸 <strong>Metabolic & Blood Glucose Care:</strong> Track fasting and post-prandial glucose. Maintain low-glycemic fiber diet. Formulations like <em>GlucoBalance</em> support glycemic control under medical supervision.")
+    # ── 10. Diabetes & Blood Sugar ─────────────────────────────
+    elif any(k in all_context_text for k in ["diabetes", "sugar", "glucose", "thirst", "polyuria"]):
+        possible_conditions.extend(["Glycemic Fluctuation", "Pre-diabetes Care", "Metabolic Health"])
+        advice_parts.append("🩸 <strong>Metabolic & Blood Glucose Care:</strong> Track fasting and post-prandial glucose. Maintain a low-glycemic high-fiber diet.<br><br>💊 <strong>Example Medicine Information:</strong> Blood sugar regulation formulations like <em>GlucoBalance</em> under doctor supervision.")
         matched_med_names.extend(["GlucoBalance"])
         rec_doctor_id = "DOC-109"
         follow_up_questions = ["Checking fasting sugar levels", "Excessive thirst and urination", "Routine sugar monitoring"]
