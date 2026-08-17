@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Health | Your Trusted Health Partner</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <meta name="description"
+        content="Antigravity Health: See a doctor today. AI symptom checker, virtual consultations, and fast medicine delivery — all in one place.">
+</head>
+
+<body>
+
+    <!-- ── Navbar ──────────────────────────────────────────── -->
+    <nav class="navbar">
+        <div class="nav-inner">
+            <div class="logo">
+                <div class="logo-icon-wrap">▲</div>
+                <span class="logo-text">Antigravity <span>Health</span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#symptom-checker">Check Symptoms</a></li>
+                <li><a href="#consult">Find a Doctor</a></li>
+                <li><a href="#pharmacy">Pharmacy</a></li>
+                <li><a href="#" id="navPrescriptionsBtn">📋 My Prescriptions</a></li>
+                <li><a href="#" id="navOrdersBtn">My Orders</a></li>
+                <li><a href="#" id="navConsultationsBtn">My Consultations</a></li>
+            </ul>
+            <div id="google_translate_element" class="translate-widget"></div>
+            <div class="nav-actions">
+                <button class="cart-nav-btn" id="cartNavBtn" aria-label="Open cart">
+                    🛒
+                    <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+                </button>
+                <button class="btn btn-outline-nav" id="loginBtn" onclick="openAuthModal(false)">🔒 Login</button>
+                <button class="btn btn-cta" id="joinBtn" onclick="openAuthModal(true)">Join Free</button>
+                <button class="btn btn-outline-nav" id="myAddressNavBtn" style="display:none">📍 Addresses</button>
+                <button class="btn btn-outline-nav" id="logoutBtn" style="display:none">Logout</button>
+                <span id="userDisplay" class="user-chip" style="display:none"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Emergency Banner ───────────────────────────────── -->
+    <div class="emergency-banner">
+        🚨 <strong>Medical Emergency?</strong> Call <strong>112</strong> immediately or visit your nearest emergency
+        room.
+    </div>
+
+    <main>
+
+        <!-- ── Hero ──────────────────────────────────────────── -->
+        <section id="home" class="hero-section">
+            <div class="hero-inner">
+                <div class="hero-text">
+                    <div class="hero-badge">✅ Trusted by 10,000+ patients</div>
+                    <h1>How are you <span class="highlight">feeling today?</span></h1>
+                    <p class="hero-desc">Describe your symptoms, speak with a doctor, or order your medicines — from the
+                        comfort of your home. We're here for you, 24/7.</p>
+                    <div class="hero-actions">
+                        <button class="btn btn-hero-primary"
+                            onclick="document.getElementById('symptom-checker').scrollIntoView({behavior:'smooth'})">
+                            🩺 Check My Symptoms
+                        </button>
+                        <button class="btn btn-hero-secondary"
+                            onclick="document.getElementById('consult').scrollIntoView({behavior:'smooth'})">
+                            👨‍⚕️ Talk to a Doctor
+                        </button>
+                    </div>
+                    <div class="trust-row">
+                        <div class="trust-item">⭐ <strong>4.9/5</strong> patient rating</div>
+                        <div class="trust-divider">|</div>
+                        <div class="trust-item">🩺 <strong>500+</strong> verified doctors</div>
+                        <div class="trust-divider">|</div>
+                        <div class="trust-item">⚡ <strong>30-min</strong> medicine delivery</div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-card hero-card-main">
+                        <div class="hc-icon">🤒</div>
+                        <div class="hc-content">
+                            <div class="hc-label">AI Symptom Check</div>
+                            <div class="hc-bar-wrap">
+                                <div class="hc-bar"></div>
+                            </div>
+                            <div class="hc-sub">Analyzing… please wait</div>
+                        </div>
+                    </div>
+                    <div class="hero-card hero-card-doc">
+                        <div class="hc-doc-avatar">👩‍⚕️</div>
+                        <div>
+                            <div class="hc-label">Dr. Priya Sharma</div>
+                            <div class="hc-sub">Pediatrician · Available now</div>
+                        </div>
+                        <span class="online-dot"></span>
+                    </div>
+                    <div class="hero-card hero-card-rx">
+                        <div class="hc-icon">💊</div>
+                        <div>
+                            <div class="hc-label">Prescription Ready</div>
+                            <div class="hc-sub">Delivery in ~28 min</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Quick Access ───────────────────────────────────── -->
+        <section class="quick-access">
+            <div class="section-inner">
+                <h2 class="section-title">What do you need today?</h2>
+                <p class="section-sub">Tap below to get started quickly</p>
+                <div class="quick-grid">
+                    <a href="#symptom-checker" class="quick-card">
+                        <div class="qc-icon" style="background:#eff6ff">🩺</div>
+                        <div class="qc-title">Check Symptoms</div>
+                        <div class="qc-desc">Describe what you're feeling</div>
+                    </a>
+                    <a href="#consult" class="quick-card">
+                        <div class="qc-icon" style="background:#f0fdf4">👨‍⚕️</div>
+                        <div class="qc-title">See a Doctor</div>
+                        <div class="qc-desc">Video, audio or chat consultation</div>
+                    </a>
+                    <a href="#pharmacy" class="quick-card">
+                        <div class="qc-icon" style="background:#fefce8">💊</div>
+                        <div class="qc-title">Order Medicine</div>
+                        <div class="qc-desc">Delivered to your door fast</div>
+                    </a>
+                    <a href="#prescriptions" class="quick-card">
+                        <div class="qc-icon" style="background:#fdf4ff">📋</div>
+                        <div class="qc-title">My Prescriptions</div>
+                        <div class="qc-desc">View &amp; manage your Rx</div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── AI Symptom Checker ─────────────────────────────── -->
+        <section id="symptom-checker" class="checker-section">
+            <div class="section-inner">
+                <div class="section-header-wrap">
+                    <div class="section-badge">🤖 AI-Powered</div>
+                    <h2 class="section-title">Tell Us How You Feel</h2>
+                    <p class="section-sub">Our AI will review your symptoms and give you guidance. <strong>Not a
+                            replacement for a doctor</strong> — but a good first step.</p>
+                </div>
+                <div class="chat-wrap">
+                    <div class="chat-box" id="chatMessages">
+                        <div class="msg msg-bot">
+                            <div class="msg-avatar">🤖</div>
+                            <div class="msg-bubble">
+                                Hello! I'm your Antigravity health assistant. <strong>How are you feeling
+                                    today?</strong><br>
+                                Describe any symptoms — like "I have a headache and slight fever since yesterday."
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-footer">
+                        <input type="text" id="userInput" class="chat-input"
+                            placeholder="e.g. I have a headache and feel tired...">
+                        <button id="sendBtn" type="button" onclick="handleAISymptomCheck()" class="btn btn-send">Send
+                            →</button>
+                    </div>
+                    <p class="chat-note">⚠️ For emergencies, always call 112. This tool is for informational guidance
+                        only.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Find a Doctor ──────────────────────────────────── -->
+        <section id="consult" class="doctors-section">
+            <div class="section-inner">
+                <div class="section-header-wrap">
+                    <div class="section-badge">🌍 World-Class Specialists &amp; General Physicians</div>
+                    <h2 class="section-title">Find the Right Doctor for You</h2>
+                    <p class="section-sub">Consult experienced General Physicians for common ailments (fever, headache,
+                        cold, cough, stomach pain, body pain) and certified super-specialists.</p>
+
+                    <!-- Doctor Search & Symptom Filter Controls -->
+                    <div class="doctor-controls"
+                        style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                        <div class="doc-search-wrap" style="position: relative; width: 100%; max-width: 580px;">
+                            <input type="text" id="docSearchInput"
+                                placeholder="🔍 Search by doctor name, specialty, or symptoms (fever, headache, cold, stomach pain, body ache)..."
+                                style="width: 100%; padding: 0.85rem 1.3rem; border-radius: 30px; border: 2px solid var(--border); font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s; box-shadow: var(--shadow-sm);">
+                        </div>
+                        <div class="category-pills" id="docCategoryPills"
+                            style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                            <button class="cat-pill active" data-spec="All">All Doctors</button>
+                            <button class="cat-pill" data-spec="General Physician">🩺 General Physicians</button>
+                            <button class="cat-pill" data-spec="Fever">🌡️ Fever &amp; Flu</button>
+                            <button class="cat-pill" data-spec="Cold">🤧 Cold &amp; Cough</button>
+                            <button class="cat-pill" data-spec="Headache">🧠 Headache &amp; Migraine</button>
+                            <button class="cat-pill" data-spec="Gastroenterologist">🤢 Stomach &amp; Digestion</button>
+                            <button class="cat-pill" data-spec="Pediatrician">👶 Pediatrician (Child
+                                Specialist)</button>
+                            <button class="cat-pill" data-spec="Dermatologist">🌟 Dermatologist (Skin &amp;
+                                Hair)</button>
+                            <button class="cat-pill" data-spec="Cardiologist">❤️ Cardiologist (Heart)</button>
+                            <button class="cat-pill" data-spec="Orthopedic">🦴 Orthopedic (Bones &amp; Joints)</button>
+                            <button class="cat-pill" data-spec="Pulmonologist">🫁 Pulmonologist (Lungs)</button>
+                            <button class="cat-pill" data-spec="Gynecologist">🌸 Gynecologist (Women's Health)</button>
+                            <button class="cat-pill" data-spec="Psychiatrist">🧘 Psychiatrist (Mental Health)</button>
+                            <button class="cat-pill" data-spec="ENT">👂 ENT Specialist</button>
+                            <button class="cat-pill" data-spec="Ophthalmologist">👁️ Eye Specialist</button>
+                            <button class="cat-pill" data-spec="Dentist">🦷 Dentist &amp; Dental</button>
+                            <button class="cat-pill" data-spec="Diabetologist">🧪 Diabetologist</button>
+                            <button class="cat-pill" data-spec="Dietitian">🥗 Nutritionist &amp; Dietitian</button>
+                            <button class="cat-pill" data-spec="Urologist">💧 Urologist (Kidney)</button>
+                            <button class="cat-pill" data-spec="Ayurvedic">🌿 Ayurveda &amp; Holistic</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="doctor-grid" id="doctorGrid">
+
+                    <div class="doctor-card" data-doc-id="DOC-201">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&h=300&fit=crop"
+                            alt="Dr. Rajesh Kumar">
+                        <h3 class="doc-name">Dr. Rajesh Kumar</h3>
+                        <div class="doc-spec">🩺 General Physician (Fever, Cold, Cough &amp; Viral Flu)</div>
+                        <div class="doc-exp">🎓 MBBS, MD · 15+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(6,100+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-201', 'Dr. Rajesh Kumar', 'General Physician (Fever, Cold, Cough & Viral Flu)', 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-202">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1594824813566-78853679014b?w=300&h=300&fit=crop"
+                            alt="Dr. Sunita Sharma">
+                        <h3 class="doc-name">Dr. Sunita Sharma</h3>
+                        <div class="doc-spec">🩺 General Practitioner (Stomach Pain, Gastric &amp; Acidity)</div>
+                        <div class="doc-exp">🎓 MBBS, DNB · 12+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(4,800+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-202', 'Dr. Sunita Sharma', 'General Practitioner (Stomach Pain, Gastric & Acidity)', 'https://images.unsplash.com/photo-1594824813566-78853679014b?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-203">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=300&h=300&fit=crop"
+                            alt="Dr. Amit Patel">
+                        <h3 class="doc-name">Dr. Amit Patel</h3>
+                        <div class="doc-spec">🩺 Family Physician (Headache, Body Ache &amp; Muscle Pain)</div>
+                        <div class="doc-exp">🎓 MBBS, MD · 10+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(3,900+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-203', 'Dr. Amit Patel', 'Family Physician (Headache, Body Ache & Muscle Pain)', 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-204">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=300&fit=crop"
+                            alt="Dr. Sneha Kulkarni">
+                        <h3 class="doc-name">Dr. Sneha Kulkarni</h3>
+                        <div class="doc-spec">🩺 General Medicine (Fever, Headache &amp; Weakness)</div>
+                        <div class="doc-exp">🎓 MBBS, MD · 11+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(3,200+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-204', 'Dr. Sneha Kulkarni', 'General Medicine (Fever, Headache & Weakness)', 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-205">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300&h=300&fit=crop"
+                            alt="Dr. Vikram Malhotra">
+                        <h3 class="doc-name">Dr. Vikram Malhotra</h3>
+                        <div class="doc-spec">🩺 General Medicine (Cold, Cough &amp; Throat Pain)</div>
+                        <div class="doc-exp">🎓 MBBS, MS · 16+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(4,500+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-205', 'Dr. Vikram Malhotra', 'General Medicine (Cold, Cough & Throat Pain)', 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-206">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=300&h=300&fit=crop"
+                            alt="Dr. Pooja Deshmukh">
+                        <h3 class="doc-name">Dr. Pooja Deshmukh</h3>
+                        <div class="doc-spec">🩺 Gastroenterologist &amp; Digestive Care</div>
+                        <div class="doc-exp">🎓 MBBS, DNB · 9+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(2,800+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-206', 'Dr. Pooja Deshmukh', 'Gastroenterologist & Digestive Care', 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-101">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=300&h=300&fit=crop"
+                            alt="Dr. Naresh Trehan">
+                        <h3 class="doc-name">Dr. Naresh Trehan</h3>
+                        <div class="doc-spec">❤️ Cardiac Surgeon</div>
+                        <div class="doc-exp">🎓 MBBS, MS, MCh · 35+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(5,200+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-101', 'Dr. Naresh Trehan', 'Cardiologist', 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-105">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1623854767648-e7bb8009f0db?w=300&h=300&fit=crop"
+                            alt="Dr. Priya Sharma">
+                        <h3 class="doc-name">Dr. Priya Sharma</h3>
+                        <div class="doc-spec">👶 Pediatrician (Child &amp; Infant Care)</div>
+                        <div class="doc-exp">🎓 MD (Pediatrics) · 14+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(3,100+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-105', 'Dr. Priya Sharma', 'Pediatrician', 'https://images.unsplash.com/photo-1623854767648-e7bb8009f0db?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-106">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1527613426441-4da17471b66d?w=300&h=300&fit=crop"
+                            alt="Dr. Anjali Mehta">
+                        <h3 class="doc-name">Dr. Anjali Mehta</h3>
+                        <div class="doc-spec">🌟 Dermatologist (Skin, Acne &amp; Allergy)</div>
+                        <div class="doc-exp">🎓 MD (Dermatology) · 16+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(4,700+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-106', 'Dr. Anjali Mehta', 'Dermatologist', 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-107">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=300&h=300&fit=crop"
+                            alt="Dr. Rajiv Verma">
+                        <h3 class="doc-name">Dr. Rajiv Verma</h3>
+                        <div class="doc-spec">🦴 Orthopedic (Joint &amp; Back Pain)</div>
+                        <div class="doc-exp">🎓 MS (Orthopedics) · 20+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(3,300+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-107', 'Dr. Rajiv Verma', 'Orthopedic', 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=400&fit=crop')">Book
+                            Consultation</button>
+                    </div>
+
+                    <div class="doctor-card" data-doc-id="DOC-110">
+                        <div class="doc-status online">● Online</div>
+                        <img class="doc-avatar-img"
+                            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop"
+                            alt="Dr. Farhan Qureshi">
+                        <h3 class="doc-name">Dr. Farhan Qureshi</h3>
+                        <div class="doc-spec">🫁 Pulmonologist (Chest, Cough &amp; Asthma)</div>
+                        <div class="doc-exp">🎓 MD (Pulmonology) · 17+ Years Exp</div>
+                        <div class="doc-rating">⭐⭐⭐⭐⭐ <span>(2,000+ reviews)</span></div>
+                        <div class="doc-fee">Consultation: <strong style="color:#10b981">&#x1F7E2; Free</strong></div>
+                        <button class="btn btn-book"
+                            onclick="window.initiateBooking('DOC-110', 'Dr. Farhan Qureshi', 'Pulmonologist')">Book
+                            Consultation</button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Pharmacy ───────────────────────────────────────── -->
+        <section id="pharmacy" class="pharmacy-section">
+            <div class="section-inner">
+                <div class="section-header-wrap">
+                    <div class="section-badge">💊 Fast Delivery</div>
+                    <h2 class="section-title">Order Your Medicines</h2>
+                    <p class="section-sub">Genuine medicines, delivered to your door in under 30 minutes. Upload Doctor
+                        Prescription or shop OTC items directly.</p>
+
+                    <!-- Search & Filter Controls -->
+                    <div class="pharmacy-controls"
+                        style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                        <div class="med-search-wrap" style="position: relative; width: 100%; max-width: 500px;">
+                            <input type="text" id="medSearchInput"
+                                placeholder="🔍 Search medicines by name, category or usage..."
+                                style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 30px; border: 2px solid var(--border); font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s;">
+                        </div>
+                        <div class="category-pills" id="categoryPills"
+                            style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                            <button class="cat-pill active" data-cat="All">All</button>
+                            <button class="cat-pill" data-cat="Fever & Pain Relief">Fever & Pain</button>
+                            <button class="cat-pill" data-cat="Flu & Fever">Flu & Cold</button>
+                            <button class="cat-pill" data-cat="Headache & Focus">Headache</button>
+                            <button class="cat-pill" data-cat="Muscle & Joint">Muscle & Joint</button>
+                            <button class="cat-pill" data-cat="Antibiotic">Antibiotics</button>
+                            <button class="cat-pill" data-cat="Diabetes">Diabetes</button>
+                            <button class="cat-pill" data-cat="Anxiety & Stress">Anxiety & Stress</button>
+                            <button class="cat-pill" data-cat="Allergy Relief">Allergy</button>
+                            <button class="cat-pill" data-cat="Vitamins & Immunity">Vitamins</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="med-grid" id="medicineGrid">
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img" src="images/med_astra_zen.png" alt="Astra-Zen Clear flu tablets"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Astra-Zen Clear</h3>
+                            <p class="med-desc">Rapid relief from flu &amp; fever symptoms.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹200.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge rx">📋 Prescription Required</div>
+                        <img class="med-img" src="images/med_neuro_sync.png" alt="Neuro-Sync capsules"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Neuro-Sync</h3>
+                            <p class="med-desc">Focus &amp; chronic headache relief.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹360.00</span>
+                                <button class="btn btn-rx">Upload Doctor Prescription</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img" src="images/med_gravity_fix.png" alt="Gravity-Fix recovery gel"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Gravity-Fix</h3>
+                            <p class="med-desc">Muscle &amp; joint recovery gel.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹240.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge rx">📋 Prescription Required</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=320&h=200&fit=crop&auto=format"
+                            alt="BioShield-X antibiotic capsules">
+                        <div class="med-body">
+                            <h3 class="med-name">BioShield-X</h3>
+                            <p class="med-desc">Broad-spectrum antibiotic capsules.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹304.00</span>
+                                <button class="btn btn-rx">Upload Doctor Prescription</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1550572017-edd951b55104?w=320&h=200&fit=crop&auto=format"
+                            alt="PainAway Pro tablets">
+                        <div class="med-body">
+                            <h3 class="med-name">PainAway Pro</h3>
+                            <p class="med-desc">Advanced pain &amp; inflammation relief.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹176.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge rx">📋 Prescription Required</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=320&h=200&fit=crop&auto=format"
+                            alt="GlucoBalance diabetes tablets">
+                        <div class="med-body">
+                            <h3 class="med-name">GlucoBalance</h3>
+                            <p class="med-desc">Daily blood sugar regulation tablets.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹440.00</span>
+                                <button class="btn btn-rx">Upload Doctor Prescription</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge rx">📋 Prescription Required</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1576671081837-49000212a370?w=320&h=200&fit=crop&auto=format"
+                            alt="CalmWave anxiety formula">
+                        <div class="med-body">
+                            <h3 class="med-name">CalmWave</h3>
+                            <p class="med-desc">Anxiety &amp; stress management formula.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹480.00</span>
+                                <button class="btn btn-rx">Upload Doctor Prescription</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=320&h=200&fit=crop&auto=format"
+                            alt="AllerShield allergy tablets">
+                        <div class="med-body">
+                            <h3 class="med-name">AllerShield</h3>
+                            <p class="med-desc">24-hour antihistamine allergy relief.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹144.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img"
+                            src="https://images.unsplash.com/photo-1512069772995-ec65ed45afd6?w=320&h=200&fit=crop&auto=format"
+                            alt="VitaCore Plus vitamins">
+                        <div class="med-body">
+                            <h3 class="med-name">VitaCore Plus</h3>
+                            <p class="med-desc">Multivitamin &amp; immunity booster complex.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹160.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img" src="images/med_paracetamol.png" alt="Paracetamol 500mg tablets"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Paracetamol 500mg</h3>
+                            <p class="med-desc">Relieves mild to moderate fever &amp; pain. Safe OTC tablet.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹25.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img" src="images/med_dolo_650.png" alt="Dolo 650 paracetamol tablets"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Dolo 650</h3>
+                            <p class="med-desc">650mg paracetamol — trusted fever &amp; body ache relief.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹31.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="med-card">
+                        <div class="med-badge fast">⚡ Fast Delivery</div>
+                        <img class="med-img" src="images/med_crocin.png" alt="Crocin Advance tablets"
+                            onerror="this.style.display='none'">
+                        <div class="med-body">
+                            <h3 class="med-name">Crocin Advance</h3>
+                            <p class="med-desc">Fast-acting fever &amp; headache relief by GSK.</p>
+                            <div class="med-footer">
+                                <span class="med-price">₹42.00</span>
+                                <button class="btn btn-cart">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Why Choose Us ──────────────────────────────────── -->
+        <section class="why-section">
+            <div class="section-inner">
+                <h2 class="section-title">Why Patients Trust Us</h2>
+                <div class="why-grid">
+                    <div class="why-card">
+                        <div class="why-icon">🔒</div>
+                        <h3>100% Private & Secure</h3>
+                        <p>Your health data is encrypted and never shared without your permission.</p>
+                    </div>
+                    <div class="why-card">
+                        <div class="why-icon">⏱️</div>
+                        <h3>Available 24/7</h3>
+                        <p>Doctors and support available round the clock — weekends and holidays included.</p>
+                    </div>
+                    <div class="why-card">
+                        <div class="why-icon">✅</div>
+                        <h3>Verified Specialists</h3>
+                        <p>Every doctor is licensed, background-checked and peer-reviewed.</p>
+                    </div>
+                    <div class="why-card">
+                        <div class="why-icon">💸</div>
+                        <h3>Affordable Care</h3>
+                        <p>Transparent pricing. No hidden fees. Insurance-friendly consultations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────── -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="logo">
+                    <div class="logo-icon-wrap">▲</div>
+                    <span class="logo-text">Antigravity <span>Health</span></span>
+                </div>
+                <p>Bringing world-class healthcare to your doorstep through AI and technology.</p>
+            </div>
+            <div class="footer-links-group">
+                <h4>Quick Links</h4>
+                <a href="#home">Home</a>
+                <a href="#symptom-checker">Symptom Checker</a>
+                <a href="#consult">Find a Doctor</a>
+                <a href="#pharmacy">Pharmacy</a>
+            </div>
+            <div class="footer-links-group">
+                <h4>Support</h4>
+                <a href="#" id="linkHelpCenter">Help Center</a>
+                <a href="#" id="linkPrivacyPolicy">Privacy Policy</a>
+                <a href="#" id="linkTermsOfService">Terms of Service</a>
+                <a href="#" id="linkContactUs">Contact Us</a>
+            </div>
+            <div class="footer-contact">
+                <h4>Emergency</h4>
+                <p class="emergency-num">📞 112</p>
+                <p>For life-threatening emergencies, always call emergency services first.</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            © 2026 Antigravity Health. All Rights Reserved. | Not a substitute for professional medical advice.
+        </div>
+    </footer>
+
+    <!-- ── Consultation Choice Modal ───────────────────────── -->
+    <div id="consultationChoiceModal" class="modal-overlay" style="display:none; z-index:2100;">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-hdr">
+                <h2>🩺 Book Virtual Consultation</h2>
+                <button class="close-modal modal-close-btn" id="closeConsultationChoiceModal">✕</button>
+            </div>
+            <div class="modal-bdy">
+                <div id="choiceDocSummary"
+                    style="display:flex; align-items:center; gap:14px; padding:0.9rem 1.1rem; background:var(--bg); border-radius:var(--radius-sm); margin-bottom:1.2rem; border:1px solid var(--border);">
+                    <img id="choiceDocImg"
+                        src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&h=300&fit=crop"
+                        style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--blue);">
+                    <div>
+                        <div id="choiceDocName" style="font-weight:800; font-size:1.05rem;">Dr. Rajesh Kumar</div>
+                        <div id="choiceDocSpec" style="font-size:0.85rem; color:var(--blue); font-weight:600;">General
+                            Physician (Fever, Cold, Cough & Viral Flu)</div>
+                        <div id="choiceDocFee" style="font-size:0.8rem; color:var(--green); font-weight:700;">🟢 Free
+                            Consultation · Instant Connect</div>
+                    </div>
+                </div>
+
+                <p style="font-size:0.9rem; color:var(--text-mid); margin-bottom:1rem;">Select your preferred
+                    consultation mode:</p>
+
+                <div style="display:flex; flex-direction:column; gap:0.9rem;">
+                    <div class="consult-mode-card" onclick="window.confirmConsultationMode('Chat')"
+                        style="display:flex; align-items:center; gap:16px; padding:1.1rem; border:2px solid var(--border); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s; background:#fff;">
+                        <div
+                            style="width:48px; height:48px; border-radius:50%; background:#eff6ff; display:flex; align-items:center; justify-content:center; font-size:1.6rem; flex-shrink:0;">
+                            💬</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:1.02rem; color:var(--text-dark);">Live Interactive
+                                Chat</div>
+                            <div style="font-size:0.82rem; color:var(--text-mid);">Direct chat with doctor, diagnosis
+                                assessment &amp; digital prescription</div>
+                        </div>
+                        <span class="btn btn-cta" style="padding:0.5rem 1rem; font-size:0.85rem;">Start Chat →</span>
+                    </div>
+
+                    <div class="consult-mode-card" onclick="window.confirmConsultationMode('Video Call')"
+                        style="display:flex; align-items:center; gap:16px; padding:1.1rem; border:2px solid var(--border); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s; background:#fff;">
+                        <div
+                            style="width:48px; height:48px; border-radius:50%; background:#f0fdf4; display:flex; align-items:center; justify-content:center; font-size:1.6rem; flex-shrink:0;">
+                            📹</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:1.02rem; color:var(--text-dark);">Live Video
+                                Consultation</div>
+                            <div style="font-size:0.82rem; color:var(--text-mid);">Live face-to-face video call (camera
+                                ON), mic/camera toggles &amp; digital prescription</div>
+                        </div>
+                        <span class="btn btn-hero-primary" style="padding:0.5rem 1rem; font-size:0.85rem;">Start Video
+                            →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Video Call Modal ─────────────────────────────── -->
+    <div id="videoCallModal" class="modal-overlay" style="display:none; z-index:2200;">
+        <div class="video-call-box"
+            style="background: var(--white); border-radius: var(--radius-xl); width: 92%; max-width: 680px; box-shadow: 0 24px 64px rgba(0,0,0,.3); overflow: hidden;">
+            <div class="video-call-hdr"
+                style="display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border);">
+                <div>
+                    <h2 id="videoDocName" style="font-size: 1.15rem; font-weight: 800;">Consultation with Doctor</h2>
+                    <div id="videoDocSpec" style="font-size: 0.85rem; color: var(--blue); font-weight: 600;">General
+                        Physician · Live Video Consultation</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="call-timer" id="callTimer"
+                        style="background: #fef2f2; color: var(--red); font-weight: 700; padding: 4px 12px; border-radius: 20px; font-size: 0.88rem;">
+                        00:00</div>
+                    <button class="modal-close-btn" id="closeVideoModalBtn" title="Close"
+                        onclick="window.stopVideoCall()">✕</button>
+                </div>
+            </div>
+            <div class="video-call-bdy"
+                style="position: relative; background: #0f172a; height: 380px; overflow:hidden;">
+                <!-- Doctor Feed -->
+                <div class="main-video"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display:flex; align-items:center; justify-content:center;">
+                    <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=800&h=600&fit=crop"
+                        alt="Doctor Video Feed" id="docVideoFeed"
+                        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95;">
+                    <div class="doc-badge"
+                        style="position: absolute; top: 1rem; left: 1rem; background: rgba(0,0,0,0.65); backdrop-filter:blur(4px); color: #fff; padding: 5px 12px; border-radius: 8px; font-size: 0.82rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+                        <span
+                            style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
+                        <span id="videoFeedDocLabel">Doctor (Live Stream)</span>
+                    </div>
+                </div>
+                <!-- Patient Local Camera Feed (PiP) -->
+                <div class="pip-video" id="pipVideoContainer"
+                    style="position: absolute; bottom: 1rem; right: 1rem; width: 130px; height: 170px; background: #1e293b; border: 2px solid #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index:10;">
+                    <video id="localVideoFeed" autoplay playsinline muted
+                        style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                    <div id="localCamOffOverlay"
+                        style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:#334155; color:#fff; align-items:center; justify-content:center; flex-direction:column; font-size:0.75rem; text-align:center;">
+                        <span style="font-size:1.5rem; margin-bottom:4px;">🚫</span>Cam Off
+                    </div>
+                    <div
+                        style="position: absolute; bottom: 6px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                        You (Live)</div>
+                </div>
+            </div>
+            <div class="video-call-controls"
+                style="display: flex; gap: 0.8rem; padding: 1.1rem 1.4rem; background: #0f172a; align-items: center; justify-content: center; flex-wrap:wrap;">
+                <button class="call-btn" id="muteBtn" aria-label="Toggle Mic" title="Toggle Mic"
+                    style="background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer; transition: all 0.2s;">🎤</button>
+                <button class="call-btn" id="camBtn" aria-label="Toggle Camera" title="Toggle Camera"
+                    style="background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer; transition: all 0.2s;">📷</button>
+                <button class="btn" id="videoPrescriptionBtn" title="Create Digital Prescription"
+                    style="background: var(--blue); color: #fff; border-radius: 24px; padding: 0 1.2rem; height: 44px; font-size: 0.88rem; font-weight: 700;">
+                    📝 Create Digital Prescription
+                </button>
+                <button class="call-btn end-call" id="endCallBtn"
+                    style="background: var(--red); color: #fff; border: none; border-radius: 24px; padding: 0 1.4rem; height: 44px; font-size: 0.92rem; font-weight: 700; cursor: pointer; transition: all 0.2s;"
+                    onclick="window.stopVideoCall()">
+                    📞 End Call
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Comprehensive Digital Prescription Creator Modal ── -->
+    <div id="prescriptionModal" class="modal-overlay" style="display:none; z-index:2300;">
+        <div class="modal-box" style="max-width: 680px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-hdr">
+                <div>
+                    <h2 style="font-size: 1.25rem;">📋 Generate Digital Prescription</h2>
+                    <div style="font-size: 0.85rem; color: var(--text-mid);">Issued by Certified Virtual Doctor</div>
+                </div>
+                <button class="close-modal modal-close-btn" id="closePrescriptionModal">✕</button>
+            </div>
+            <div class="modal-bdy">
+                <!-- Doctor & Patient Info Bar -->
+                <div
+                    style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: var(--bg); padding: 0.9rem; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid var(--border);">
+                    <div>
+                        <label
+                            style="font-size: 0.75rem; color: var(--text-mid); font-weight: 700; text-transform: uppercase;">Doctor</label>
+                        <div id="prescDocName" style="font-weight: 700; font-size: 0.95rem; color: var(--blue);">Dr.
+                            Rajesh Kumar</div>
+                        <div id="prescDocSpec" style="font-size: 0.8rem; color: var(--text-mid);">General Physician
+                            (MBBS, MD)</div>
+                    </div>
+                    <div>
+                        <label
+                            style="font-size: 0.75rem; color: var(--text-mid); font-weight: 700; text-transform: uppercase;">Patient
+                            Name *</label>
+                        <input type="text" id="patientName" placeholder="Full name of patient"
+                            style="width: 100%; padding: 0.4rem 0.6rem; border: 1.5px solid var(--border); border-radius: 6px; font-size: 0.9rem; font-family: inherit;">
+                    </div>
+                </div>
+
+                <!-- Diagnosis & Symptom Selection -->
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem; display:block;">Clinical
+                        Diagnosis / Primary Complaint *</label>
+                    <input type="text" id="prescDiagnosis" placeholder="e.g. Acute Viral Fever with Headache & Cold"
+                        style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; font-family: inherit;">
+                    <!-- Quick Symptom Tags -->
+                    <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.5rem;">
+                        <span class="badge-chip"
+                            onclick="document.getElementById('prescDiagnosis').value='Viral Fever with Cold & Body Pain'"
+                            style="background:var(--bg); border:1px solid var(--border); padding:3px 9px; border-radius:12px; font-size:0.75rem; cursor:pointer; font-weight:600;">+
+                            Viral Fever &amp; Cold</span>
+                        <span class="badge-chip"
+                            onclick="document.getElementById('prescDiagnosis').value='Acute Tension Headache & Migraine'"
+                            style="background:var(--bg); border:1px solid var(--border); padding:3px 9px; border-radius:12px; font-size:0.75rem; cursor:pointer; font-weight:600;">+
+                            Headache</span>
+                        <span class="badge-chip"
+                            onclick="document.getElementById('prescDiagnosis').value='Stomach Pain, Acidity & Indigestion'"
+                            style="background:var(--bg); border:1px solid var(--border); padding:3px 9px; border-radius:12px; font-size:0.75rem; cursor:pointer; font-weight:600;">+
+                            Stomach Pain &amp; Acidity</span>
+                        <span class="badge-chip"
+                            onclick="document.getElementById('prescDiagnosis').value='Cold, Cough & Sore Throat'"
+                            style="background:var(--bg); border:1px solid var(--border); padding:3px 9px; border-radius:12px; font-size:0.75rem; cursor:pointer; font-weight:600;">+
+                            Cough &amp; Sore Throat</span>
+                        <span class="badge-chip"
+                            onclick="document.getElementById('prescDiagnosis').value='Generalized Body Ache & Muscle Fatigue'"
+                            style="background:var(--bg); border:1px solid var(--border); padding:3px 9px; border-radius:12px; font-size:0.75rem; cursor:pointer; font-weight:600;">+
+                            Body Pain</span>
+                    </div>
+                </div>
+
+                <!-- Prescribed Medicines Section (Multi-Item) -->
+                <div style="margin-bottom: 1rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6rem;">
+                        <label style="font-weight: 700; font-size: 0.9rem;">Prescribed Medicines (Pharmacy
+                            Matched)</label>
+                        <button type="button" id="addPrescMedRowBtn" class="btn"
+                            style="padding: 0.3rem 0.7rem; font-size: 0.8rem; background: var(--blue-light); color: var(--blue); border-radius: 6px; font-weight: 700;">+
+                            Add Medicine</button>
+                    </div>
+
+                    <div id="prescMedRowsContainer" style="display:flex; flex-direction:column; gap:0.8rem;">
+                        <!-- First Default Medicine Row -->
+                        <div class="presc-med-row"
+                            style="background: var(--bg); padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); display:grid; grid-template-columns: 2fr 1.2fr 1.5fr 1fr auto; gap: 0.6rem; align-items: end;">
+                            <div>
+                                <label
+                                    style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Medicine
+                                    Name</label>
+                                <select class="rx-med-name"
+                                    style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
+                                    <option value="Dolo 650">Dolo 650 (Paracetamol 650mg)</option>
+                                    <option value="Paracetamol 500mg">Paracetamol 500mg (Fever &amp; Pain)</option>
+                                    <option value="Crocin Advance">Crocin Advance (Fast Relief)</option>
+                                    <option value="Astra-Zen Clear">Astra-Zen Clear (Flu &amp; Fever)</option>
+                                    <option value="Neuro-Sync">Neuro-Sync (Headache &amp; Focus)</option>
+                                    <option value="Gravity-Fix">Gravity-Fix (Muscle Gel)</option>
+                                    <option value="BioShield-X">BioShield-X (Antibiotic)</option>
+                                    <option value="PainAway Pro">PainAway Pro (Pain Relief)</option>
+                                    <option value="GlucoBalance">GlucoBalance (Blood Sugar)</option>
+                                    <option value="CalmWave">CalmWave (Stress &amp; Anxiety)</option>
+                                    <option value="AllerShield">AllerShield (Antihistamine)</option>
+                                    <option value="VitaCore Plus">VitaCore Plus (Multivitamin)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label
+                                    style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Dosage</label>
+                                <input type="text" class="rx-med-dosage" value="1 tablet (650mg)"
+                                    style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
+                            </div>
+                            <div>
+                                <label
+                                    style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Frequency</label>
+                                <select class="rx-med-freq"
+                                    style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
+                                    <option value="Twice daily after meals (1-0-1)">Twice daily after food (1-0-1)
+                                    </option>
+                                    <option value="Three times a day (1-1-1)">Three times a day (1-1-1)</option>
+                                    <option value="Once daily at bedtime (0-0-1)">Once daily at bedtime (0-0-1)</option>
+                                    <option value="Once daily morning (1-0-0)">Once daily morning (1-0-0)</option>
+                                    <option value="As needed for pain / fever (SOS)">As needed (SOS / Max 3/day)
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label
+                                    style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Duration</label>
+                                <input type="text" class="rx-med-dur" value="5 days"
+                                    style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
+                            </div>
+                            <button type="button" class="remove-rx-row-btn"
+                                style="background:none; border:none; color:var(--red); font-size:1.2rem; cursor:pointer; padding:0 4px; line-height:1;"
+                                title="Remove row">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clinical Instructions & Advice -->
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem; display:block;">Clinical
+                        Advice &amp; Instructions</label>
+                    <textarea id="prescInstructions" rows="3"
+                        placeholder="e.g. Drink plenty of warm water. Rest adequately and take light meals. Avoid cold drinks. Review if fever persists beyond 3 days."
+                        style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display:flex; gap:0.8rem;">
+                    <button id="savePrescription" class="btn btn-cta"
+                        style="flex:1; padding: 0.85rem; font-size: 1rem; font-weight:700;">
+                        ✅ Issue Digital Prescription
+                    </button>
+                    <button type="button" id="cancelPrescriptionBtn" class="btn"
+                        style="background:var(--bg); border:1.5px solid var(--border); padding: 0.85rem 1.2rem;"
+                        onclick="document.getElementById('prescriptionModal').style.display='none'">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Auth Modal ─────────────────────────────────────── -->
+    <div id="authModal" class="modal-overlay" style="display:none">
+        <div class="modal-box">
+            <div class="modal-hdr">
+                <h2 id="authModalTitle">👋 Welcome Back</h2>
+                <button class="close-modal modal-close-btn" id="closeAuthModal">✕</button>
+            </div>
+            <div class="modal-bdy">
+                <form id="authForm" onsubmit="handleAuthSubmit(); return false;">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                    <div id="authError" class="auth-error" style="display:none"></div>
+                    <button id="authSubmitBtn" type="button" onclick="handleAuthSubmit()" class="btn btn-cta"
+                        style="width:100%">Login</button>
+                </form>
+                <button id="guestAuthBtn" type="button" onclick="handleGuestAuth()" class="btn"
+                    style="width:100%;margin-top:0.6rem;background:var(--bg);color:var(--text-dark);border:1.5px solid var(--border);font-weight:600">
+                    ⚡ Continue as Guest / Demo
+                </button>
+                <p class="auth-toggle-text">
+                    <span id="authToggleText">Don't have an account?</span>
+                    <a href="#" id="authToggleLink"> Register here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Toast ──────────────────────────────────────────── -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ── Cart Drawer ───────────────────────────────────── -->
+    <div id="cartOverlay" class="cart-overlay" aria-hidden="true"></div>
+    <aside id="cartDrawer" class="cart-drawer" role="dialog" aria-label="Shopping Cart">
+        <div class="cart-drawer-hdr">
+            <h2>🛒 Your Cart</h2>
+            <button id="closeCartBtn" class="modal-close-btn" aria-label="Close cart">✕</button>
+        </div>
+
+        <div class="cart-drawer-body">
+            <!-- Empty state -->
+            <div id="cartEmpty" class="cart-empty">
+                <div class="cart-empty-icon">🛍️</div>
+                <p class="cart-empty-title">Your cart is empty</p>
+                <p class="cart-empty-sub">Add medicines from the pharmacy section below.</p>
+                <button class="btn btn-cta" style="margin-top:1.2rem"
+                    onclick="document.getElementById('pharmacy').scrollIntoView({behavior:'smooth'});closeCart()">
+                    Browse Medicines
+                </button>
+            </div>
+
+            <!-- Item list -->
+            <ul id="cartItemList" class="cart-item-list"></ul>
+        </div>
+
+        <!-- Order Summary -->
+        <div id="cartSummary" class="cart-summary" style="display:none">
+            <div class="cart-summary-row">
+                <span>Subtotal</span>
+                <span id="cartSubtotal">₹0.00</span>
+            </div>
+            <div class="cart-summary-row">
+                <span>Delivery Fee</span>
+                <span id="cartDelivery">₹30.00</span>
+            </div>
+            <div class="cart-summary-row cart-summary-total">
+                <span>Total</span>
+                <span id="cartTotal">₹30.00</span>
+            </div>
+            <button id="checkoutBtn" class="btn btn-cta" style="width:100%;margin-top:1rem;padding:1rem;font-size:1rem">
+                ✅ Place Order
+            </button>
+            <button class="btn"
+                style="width:100%;margin-top:.6rem;background:var(--bg);color:var(--text-mid);border:1.5px solid var(--border)"
+                onclick="clearCart()">
+                🗑️ Clear Cart
+            </button>
+        </div>
+    </aside>
+
+    <!-- ── Address Management Modal ───────────────────────── -->
+    <div id="addressModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 650px;">
+            <div class="modal-hdr">
+                <h2>📍 Address Management</h2>
+                <button class="close-modal modal-close-btn" id="closeAddressModal">✕</button>
+            </div>
+            <div class="modal-bdy">
+                <div id="addressListSection">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700;">Saved Delivery Addresses</h3>
+                        <button class="btn btn-cta" id="showAddAddressFormBtn"
+                            style="padding: 0.4rem 0.9rem; font-size: 0.85rem;">+ Add New Address</button>
+                    </div>
+                    <div id="addressList" class="address-card-list">
+                        <div class="empty-state-p">Loading saved addresses...</div>
+                    </div>
+                </div>
+
+                <!-- Add Address Form -->
+                <form id="addAddressForm" style="display: none; margin-top: 1rem;">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem;">Add New Address</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label>Full Name *</label>
+                            <input type="text" id="addrFullName" placeholder="Recipient's Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mobile Number *</label>
+                            <input type="tel" id="addrMobile" placeholder="10-digit mobile" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>House / Flat / Building No. *</label>
+                        <input type="text" id="addrBuilding" placeholder="Flat 402, Block B, Green Heights" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Street / Area / Landmark</label>
+                        <input type="text" id="addrStreet" placeholder="Near City Mall, MG Road">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label>City / Town *</label>
+                            <input type="text" id="addrCity" placeholder="City" required>
+                        </div>
+                        <div class="form-group">
+                            <label>District *</label>
+                            <input type="text" id="addrDistrict" placeholder="District" required>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label>State *</label>
+                            <input type="text" id="addrState" placeholder="State" required>
+                        </div>
+                        <div class="form-group">
+                            <label>PIN Code *</label>
+                            <input type="text" id="addrPincode" placeholder="6-digit PIN" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Address Type</label>
+                        <select id="addrType">
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="addrIsDefault" style="width: auto;">
+                        <label for="addrIsDefault" style="margin: 0; cursor: pointer;">Set as default delivery
+                            address</label>
+                    </div>
+                    <div style="display: flex; gap: 0.6rem; margin-top: 1rem;">
+                        <button type="submit" id="saveAddressBtn" class="btn btn-cta" style="flex: 1;">Save
+                            Address</button>
+                        <button type="button" id="cancelAddressBtn" class="btn"
+                            style="background: var(--bg); border: 1.5px solid var(--border);">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Checkout & Demo Payment Modal ──────────────────── -->
+    <div id="checkoutModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-hdr">
+                <h2>💳 Checkout &amp; Order Summary</h2>
+                <button class="close-modal modal-close-btn" id="closeCheckoutModal">✕</button>
+            </div>
+            <div class="modal-bdy">
+                <!-- Step 1: Address Selection -->
+                <div class="checkout-step" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem;">1. Select Delivery Address *
+                    </h3>
+                    <div id="checkoutAddressSelectArea">
+                        <div class="empty-state-p">Loading addresses...</div>
+                    </div>
+                    <button class="btn btn-outline-nav" id="checkoutAddNewAddrBtn"
+                        style="margin-top: 0.6rem; font-size: 0.85rem; padding: 0.4rem 0.8rem;">+ Add / Manage
+                        Addresses</button>
+                </div>
+
+                <!-- Step 2: Order Summary -->
+                <div class="checkout-step"
+                    style="margin-bottom: 1.5rem; background: var(--bg); padding: 1rem; border-radius: var(--radius-sm);">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem;">2. Order Items</h3>
+                    <div id="checkoutItemsList"
+                        style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.8rem;">
+                    </div>
+                    <div
+                        style="border-top: 1px solid var(--border); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.95rem;">
+                        <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span
+                                id="checkoutSubtotal">₹0.00</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Delivery Fee:</span><span
+                                id="checkoutDelivery">₹30.00</span></div>
+                        <div
+                            style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; color: var(--blue);">
+                            <span>Total Amount:</span><span id="checkoutTotal">₹30.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Payment Method (College Demo) -->
+                <div class="checkout-step" style="margin-bottom: 1.5rem;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700;">3. Payment Method</h3>
+                        <span
+                            style="background: #fef2f2; color: var(--red); font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 12px;">DEMO
+                            MODE</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; padding: 0.8rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;">
+                            <input type="radio" name="paymentMethod" value="Demo UPI / QR" checked>
+                            <div>
+                                <div style="font-weight: 600;">⚡ Demo UPI / QR (Instant Simulation)</div>
+                                <div style="font-size: 0.8rem; color: var(--text-mid);">Google Pay, PhonePe, Paytm
+                                    simulation</div>
+                            </div>
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; padding: 0.8rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;">
+                            <input type="radio" name="paymentMethod" value="Demo Credit/Debit Card">
+                            <div>
+                                <div style="font-weight: 600;">💳 Demo Credit / Debit Card</div>
+                                <div style="font-size: 0.8rem; color: var(--text-mid);">Safe simulated card payment
+                                </div>
+                            </div>
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; padding: 0.8rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;">
+                            <input type="radio" name="paymentMethod" value="Cash on Delivery">
+                            <div>
+                                <div style="font-weight: 600;">💵 Cash on Delivery</div>
+                                <div style="font-size: 0.8rem; color: var(--text-mid);">Pay cash upon medicine doorstep
+                                    delivery</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="confirmOrderBtn" class="btn btn-cta"
+                    style="width: 100%; padding: 1rem; font-size: 1.05rem;">
+                    🚀 Confirm &amp; Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── My Orders Modal ────────────────────────────────── -->
+    <div id="ordersModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 750px;">
+            <div class="modal-hdr">
+                <h2>📦 My Orders</h2>
+                <button class="close-modal modal-close-btn" id="closeOrdersModal">✕</button>
+            </div>
+            <div class="modal-bdy" style="max-height: 70vh; overflow-y: auto;">
+                <div id="ordersList">
+                    <div class="empty-state-p">Loading your orders...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Doctor Profile Modal ────────────────────────────── -->
+    <div id="doctorProfileModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 550px;">
+            <div class="modal-hdr">
+                <h2>👨‍⚕️ Doctor Profile</h2>
+                <button class="close-modal modal-close-btn" id="closeDoctorProfileModal">✕</button>
+            </div>
+            <div class="modal-bdy" id="doctorProfileBody">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Doctor Chat Modal ──────────────────────────────── -->
+    <div id="doctorChatModal" class="modal-overlay" style="display:none; z-index:2200;">
+        <div class="modal-box" style="max-width: 620px; padding: 0; overflow: hidden;">
+            <div class="modal-hdr"
+                style="padding: 1.1rem 1.4rem; background: var(--blue); color: #fff; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="chatDocAvatar"
+                        style="font-size: 1.6rem; background: rgba(255,255,255,0.2); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        👨‍⚕️</div>
+                    <div>
+                        <h2 id="chatDocName" style="color: #fff; font-size: 1.1rem; margin:0;">Dr. Naresh Trehan</h2>
+                        <div id="chatDocSpec" style="font-size: 0.82rem; opacity: 0.9;">Cardiologist · Online</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn" id="chatPrescriptionBtn" title="Create Digital Prescription"
+                        style="background:#fff; color:var(--blue); padding:0.4rem 0.8rem; font-size:0.82rem; font-weight:700; border-radius:20px;">
+                        📝 Prescription
+                    </button>
+                    <button class="close-modal modal-close-btn" id="closeDoctorChatModal"
+                        style="color: #fff;">✕</button>
+                </div>
+            </div>
+            <div
+                style="background: #f0fdf4; color: #166534; font-size: 0.78rem; text-align: center; padding: 4px; font-weight: 600; border-bottom:1px solid #bbf7d0;">
+                🟢 Live Doctor Consultation Session
+            </div>
+            <div class="chat-bdy" id="docChatMessages"
+                style="height: 340px; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; background: #f8fafc;">
+                <!-- Messages injected here -->
+            </div>
+            <div class="chat-ftr"
+                style="padding: 1rem; background: #fff; border-top: 1px solid var(--border); display: flex; gap: 0.6rem;">
+                <input type="text" id="docChatInput" placeholder="Type your health query or symptoms to doctor..."
+                    style="flex: 1; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border); font-family: inherit; font-size:0.92rem;">
+                <button id="sendDocMsgBtn" class="btn btn-cta" style="padding: 0 1.2rem;">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── My Consultations History Modal ─────────────────── -->
+    <div id="consultationsModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 700px;">
+            <div class="modal-hdr">
+                <h2>🩺 My Consultations</h2>
+                <button class="close-modal modal-close-btn" id="closeConsultationsModal">✕</button>
+            </div>
+            <div class="modal-bdy" style="max-height: 70vh; overflow-y: auto;">
+                <div id="consultationsList">
+                    <div class="empty-state-p">Loading consultation history...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── My Prescriptions Modal ─────────────────────────── -->
+    <div id="myPrescriptionsModal" class="modal-overlay" style="display:none; z-index:2200;">
+        <div class="modal-box" style="max-width: 780px;">
+            <div class="modal-hdr">
+                <div>
+                    <h2>📋 My Digital Prescriptions</h2>
+                    <div style="font-size: 0.85rem; color: var(--text-mid);">View, print/download, and order prescribed
+                        medicines directly from pharmacy</div>
+                </div>
+                <button class="close-modal modal-close-btn" id="closeMyPrescriptionsModal">✕</button>
+            </div>
+            <div class="modal-bdy" style="max-height: 72vh; overflow-y: auto;">
+                <div id="prescriptionsList">
+                    <div class="empty-state-p">Loading your prescriptions...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Printable Medical Prescription View Modal ──────── -->
+    <div id="prescriptionPrintModal" class="modal-overlay" style="display:none; z-index:2400;">
+        <div class="modal-box" style="max-width: 720px; padding: 0; overflow: hidden; background: #fff;">
+            <div class="modal-hdr" style="background: var(--blue); color: #fff; padding: 0.9rem 1.4rem;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:1.3rem;">📋</span>
+                    <h2 style="color:#fff; font-size:1.1rem; margin:0;">Official Digital Prescription</h2>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button class="btn" onclick="window.printPrescriptionDoc()"
+                        style="background:#fff; color:var(--blue); padding:0.4rem 0.9rem; font-size:0.85rem; font-weight:700; border-radius:6px; border:none; cursor:pointer;">🖨️
+                        Print / PDF</button>
+                    <button class="close-modal modal-close-btn" id="closePrintPrescriptionModal"
+                        style="color:#fff;">✕</button>
+                </div>
+            </div>
+            <div class="modal-bdy" id="printablePrescriptionContent"
+                style="padding: 1.6rem; max-height: 75vh; overflow-y: auto; background: #fff; color: #1e293b;">
+                <!-- Dynamically populated printable prescription sheet -->
+            </div>
+            <div
+                style="padding: 1rem 1.4rem; background: var(--bg); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:0.6rem;">
+                <div style="font-size: 0.85rem; color: var(--text-mid);">Next step: Order your prescribed medicines from
+                    our certified pharmacy:</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-outline-nav" onclick="window.goToMedicineStore()"
+                        style="padding: 0.6rem 1.1rem; font-size: 0.88rem; font-weight: 600;">
+                        🏪 Browse Store
+                    </button>
+                    <button id="printModalOrderPharmacyBtn" class="btn btn-cta"
+                        style="padding: 0.6rem 1.4rem; font-size: 0.92rem; font-weight: 700;">
+                        🛒 Order Medicines from Pharmacy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Info / Support Modal ────────────────────────────── -->
+    <div id="infoModal" class="modal-overlay" style="display:none">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-hdr">
+                <h2 id="infoModalTitle">Support Information</h2>
+                <button class="close-modal modal-close-btn" id="closeInfoModal">✕</button>
+            </div>
+            <div class="modal-bdy" id="infoModalBody"
+                style="max-height: 70vh; overflow-y: auto; font-size: 0.95rem; line-height: 1.6;">
+                <!-- Dynamic info content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Scripts ────────────────────────────────────────── -->
+    <script src="script.js"></script>
+
+    <!-- Google Translate -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'hi,es,fr,de,ar,zh-CN,ja,ko,pt,ru,ta,te,bn,ur,ml,en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript"
+        src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</body>
+
+</html>
