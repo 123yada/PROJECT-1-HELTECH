@@ -147,6 +147,8 @@ def init_db():
         specialization TEXT NOT NULL,
         consultation_type TEXT DEFAULT 'Chat',
         status TEXT DEFAULT 'Active',
+        call_session_id TEXT,
+        completed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -170,6 +172,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         prescription_id TEXT UNIQUE,
         user_id TEXT NOT NULL,
+        consultation_id TEXT,
         patient_name TEXT NOT NULL,
         medication TEXT NOT NULL,
         dosage TEXT NOT NULL,
@@ -197,6 +200,15 @@ def init_db():
         if col_name not in existing_cols:
             cursor.execute(f"ALTER TABLE prescriptions ADD COLUMN {col_name} {col_type};")
 
+    cursor.execute("PRAGMA table_info(consultations);")
+    consultation_cols = [c[1] for c in cursor.fetchall()]
+    for col_name, col_type in [("call_session_id", "TEXT"), ("completed_at", "TIMESTAMP")]:
+        if col_name not in consultation_cols:
+            cursor.execute(f"ALTER TABLE consultations ADD COLUMN {col_name} {col_type};")
+
+    if "consultation_id" not in existing_cols:
+        cursor.execute("ALTER TABLE prescriptions ADD COLUMN consultation_id TEXT;")
+
     conn.commit()
 
     # Seed Medicines if empty
@@ -215,17 +227,28 @@ def init_db():
             ("MED-010", "Paracetamol 500mg", "Paracetamol", "Fever & Pain Relief", "Relieves mild to moderate fever & pain. Safe OTC tablet.", "Fever, mild headache, cold body ache", "Severe liver condition", 0, 25.0, 500, "1-2 tablets every 4-6 hours", "Maximum 4000mg per 24 hours", "Fast Delivery", "images/med_paracetamol.png"),
             ("MED-011", "Dolo 650", "Paracetamol 650mg", "Fever & Body Ache", "650mg paracetamol — trusted fever & body ache relief.", "High fever, dengue/flu body ache", "Severe hepatic impairment", 0, 31.0, 400, "1 tablet 3 times a day after food", "Do not combine with other paracetamol products", "Fast Delivery", "images/med_dolo_650.png"),
             ("MED-012", "Crocin Advance", "Fast-Release Paracetamol", "Fever & Headache", "Fast-acting fever & headache relief by GSK.", "Headache, fever, toothache", "Allergy to paracetamol", 0, 42.0, 300, "1 tablet every 4 hours as needed", "Starts working in 5 minutes", "Fast Delivery", "images/med_crocin.png"),
-            ("MED-013", "Digene Gel", "Magaldrate & Simethicone", "Acidity & Digestion", "Soothing antacid liquid gel for fast heartburn & acid reflux relief.", "Acidity, heartburn, bloating, stomach gas", "Kidney failure", 0, 115.0, 0, "2 teaspoons after meals and at bedtime", "Out of stock item demonstration", "Out of Stock", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=320&h=200&fit=crop&auto=format")
+            ("MED-013", "Digene Gel", "Magaldrate & Simethicone", "Acidity & Digestion", "Soothing antacid liquid gel for fast heartburn & acid reflux relief.", "Acidity, heartburn, bloating, stomach gas", "Kidney failure", 0, 115.0, 150, "2 teaspoons after meals and at bedtime", "Take after meals or when feeling acidic discomfort", "Fast Delivery", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=320&h=200&fit=crop&auto=format"),
+            ("MED-014", "Spasmo-Relief", "Dicyclomine & Paracetamol", "Stomach Cramps & Pain", "Relieves acute abdominal cramps, intestinal spasms & stomach ache.", "Stomach pain, abdominal cramps, intestinal spasm", "Glaucoma, severe intestinal disease", 0, 85.0, 100, "1 tablet twice daily after meals", "Consult doctor if pain persists", "Fast Delivery", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=320&h=200&fit=crop&auto=format")
         ]
         cursor.executemany("""
         INSERT INTO medicines (medicine_id, name, generic_name, category, description, indications, contraindications, prescription_required, price, stock, dosage_information, warnings, tag, image)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, default_meds)
 
+    # Ensure Digene Gel is in stock and Spasmo-Relief exists in database if DB already existed
+    cursor.execute("UPDATE medicines SET stock = 150, tag = 'Fast Delivery' WHERE name = 'Digene Gel';")
+    cursor.execute("SELECT COUNT(*) FROM medicines WHERE name = 'Spasmo-Relief';")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+        INSERT INTO medicines (medicine_id, name, generic_name, category, description, indications, contraindications, prescription_required, price, stock, dosage_information, warnings, tag, image)
+        VALUES ('MED-014', 'Spasmo-Relief', 'Dicyclomine & Paracetamol', 'Stomach Cramps & Pain', 'Relieves acute abdominal cramps, intestinal spasms & stomach ache.', 'Stomach pain, abdominal cramps, intestinal spasm', 'Glaucoma, severe intestinal disease', 0, 85.0, 100, '1 tablet twice daily after meals', 'Consult doctor if pain persists', 'Fast Delivery', 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=320&h=200&fit=crop&auto=format');
+        """)
+    conn.commit()
+
     # Seed All Doctors with 100% Unique Profile Photos & Diverse Specializations
     all_docs = [
         ("DOC-201", "Dr. Rajesh Kumar", "MBBS, MD (General Medicine)", "General Physician (Fever, Cold, Cough & Viral Flu)", "15+ Years", 0.0, "Available Today", "Online", 4.9, 6100, "Expert General Physician specializing in viral fever, acute cold, persistent cough, tension headache, seasonal infections & preventive care.", "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop"),
-        ("DOC-202", "Dr. Sunita Sharma", "MBBS, DNB (Internal Medicine)", "General Practitioner (Stomach Pain, Gastric & Acidity)", "12+ Years", 0.0, "Available Today", "Online", 4.9, 4800, "Specialist in stomach pain, abdominal cramps, gastric reflux, heartburn, bloating, indigestion & nausea care.", "https://images.unsplash.com/photo-1594824813566-78853679014b?w=400&h=400&fit=crop"),
+        ("DOC-202", "Dr. Sunita Sharma", "MBBS, DNB (Internal Medicine)", "General Practitioner (Stomach Pain, Gastric & Acidity)", "12+ Years", 0.0, "Available Today", "Online", 4.9, 4800, "Specialist in stomach pain, abdominal cramps, gastric reflux, heartburn, bloating, indigestion & nausea care.", "images/dr_sunita_sharma.jpg"),
         ("DOC-203", "Dr. Amit Patel", "MBBS, MD (Family Medicine)", "Family Physician (Headache, Body Ache & Muscle Pain)", "10+ Years", 0.0, "Available Today", "Online", 4.8, 3900, "Primary care practitioner for acute headache, migraine, generalized body aches, muscle fatigue & overall wellness guidance.", "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&h=400&fit=crop"),
         ("DOC-204", "Dr. Sneha Kulkarni", "MBBS, MD (General Medicine)", "General Physician (Fever, Headache & Weakness)", "11+ Years", 0.0, "Available Today", "Online", 4.9, 3200, "Expert in seasonal fever, shivering, severe headaches, chronic fatigue, weakness & nutritional assessment.", "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"),
         ("DOC-205", "Dr. Vikram Malhotra", "MBBS, MS (General Medicine)", "General Medicine (Cold, Cough, Sore Throat & Body Pain)", "16+ Years", 0.0, "Available Today", "Online", 4.9, 4500, "Senior physician handling upper respiratory infections, chest congestion, sore throat, sneezing, dry cough & body pain.", "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop"),
@@ -299,6 +322,11 @@ class ConsultationCreateSchema(BaseModel):
     user_id: str
     doctor_id: str
     consultation_type: Optional[str] = "Chat"
+    call_session_id: Optional[str] = None
+
+class ConsultationCompleteSchema(BaseModel):
+    user_id: str
+    call_session_id: Optional[str] = None
 
 class MessageSchema(BaseModel):
     sender_id: str
@@ -315,6 +343,7 @@ class MedicineItemSchema(BaseModel):
 class PrescriptionSchema(BaseModel):
     user_id: str
     patient_name: str
+    consultation_id: Optional[str] = None
     doctor_id: Optional[str] = "DOC-201"
     doctor_name: Optional[str] = "Dr. Rajesh Kumar"
     doctor_specialization: Optional[str] = "General Physician"
@@ -572,10 +601,11 @@ def start_consultation(data: ConsultationCreateSchema, db: sqlite3.Connection = 
         raise HTTPException(status_code=404, detail="Doctor not found")
     
     consultation_id = f"CNS-{random.randint(100000, 999999)}"
+    call_session_id = data.call_session_id or f"CALL-{random.randint(100000, 999999)}"
     cursor.execute("""
-    INSERT INTO consultations (consultation_id, user_id, doctor_id, doctor_name, specialization, consultation_type, status)
-    VALUES (?, ?, ?, ?, ?, ?, 'Active')
-    """, (consultation_id, data.user_id, data.doctor_id, doc["name"], doc["specialization"], data.consultation_type))
+    INSERT INTO consultations (consultation_id, user_id, doctor_id, doctor_name, specialization, consultation_type, status, call_session_id)
+    VALUES (?, ?, ?, ?, ?, ?, 'Active', ?)
+    """, (consultation_id, data.user_id, data.doctor_id, doc["name"], doc["specialization"], data.consultation_type, call_session_id))
 
     # Add welcome message from doctor
     consult_type_label = "Video Consultation" if data.consultation_type == "Video Call" else "Chat Consultation"
@@ -593,8 +623,31 @@ def start_consultation(data: ConsultationCreateSchema, db: sqlite3.Connection = 
         "doctor_id": doc["doctor_id"],
         "doctor_name": doc["name"], 
         "specialization": doc["specialization"],
-        "consultation_type": data.consultation_type
+        "consultation_type": data.consultation_type,
+        "call_session_id": call_session_id
     }
+
+@app.post("/api/consultations/{consultation_id}/complete")
+def complete_consultation(consultation_id: str, data: ConsultationCompleteSchema, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM consultations WHERE consultation_id = ? AND user_id = ?", (consultation_id, data.user_id))
+    consultation = cursor.fetchone()
+    if not consultation:
+        raise HTTPException(status_code=404, detail="Consultation session not found")
+    if consultation["consultation_type"] != "Video Call":
+        raise HTTPException(status_code=400, detail="Only video consultations can be completed from a call")
+    if data.call_session_id and consultation["call_session_id"] and data.call_session_id != consultation["call_session_id"]:
+        raise HTTPException(status_code=409, detail="Call session does not match this consultation")
+
+    completed_at = consultation["completed_at"] or datetime.now().isoformat()
+    cursor.execute("""
+        UPDATE consultations
+        SET status = 'Completed', completed_at = ?, call_session_id = COALESCE(call_session_id, ?)
+        WHERE consultation_id = ? AND user_id = ?
+    """, (completed_at, data.call_session_id, consultation_id, data.user_id))
+    db.commit()
+    cursor.execute("SELECT * FROM consultations WHERE consultation_id = ?", (consultation_id,))
+    return {"status": "success", "consultation": dict(cursor.fetchone())}
 
 @app.get("/api/consultations")
 def get_user_consultations(user_id: str = Query(...), db: sqlite3.Connection = Depends(get_db)):
@@ -729,17 +782,32 @@ def create_prescription(data: PrescriptionSchema, db: sqlite3.Connection = Depen
     doc_spec = data.doctor_specialization or "General Physician"
     diagnosis = data.diagnosis or "Viral Flu & General Clinical Assessment"
     instructions = data.instructions or "Take prescribed medicines on time. Stay hydrated and rest."
-    
+
+    consultation = None
+    if data.consultation_id:
+        cursor.execute("""
+            SELECT * FROM consultations
+            WHERE consultation_id = ? AND user_id = ? AND consultation_type = 'Video Call' AND status = 'Completed'
+        """, (data.consultation_id, data.user_id))
+        consultation = cursor.fetchone()
+        if not consultation:
+            raise HTTPException(status_code=409, detail="Complete the video consultation before issuing a prescription")
+        doctor_name = consultation["doctor_name"]
+        doc_spec = consultation["specialization"]
+        data_doctor_id = consultation["doctor_id"]
+    else:
+        data_doctor_id = data.doctor_id or "DOC-201"
+
     cursor.execute("""
     INSERT INTO prescriptions (
-        prescription_id, user_id, patient_name, medication, dosage, 
-        doctor_id, doctor_name, doctor_specialization, diagnosis, 
+        prescription_id, user_id, consultation_id, patient_name, medication, dosage,
+        doctor_id, doctor_name, doctor_specialization, diagnosis,
         medicines_json, instructions
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        rx_id, data.user_id, data.patient_name, med_summary, dose_summary,
-        data.doctor_id or "DOC-201", doctor_name, doc_spec, diagnosis,
+        rx_id, data.user_id, data.consultation_id, data.patient_name, med_summary, dose_summary,
+        data_doctor_id, doctor_name, doc_spec, diagnosis,
         meds_json_str, instructions
     ))
     db.commit()
@@ -999,7 +1067,7 @@ def analyze_symptoms(data: SymptomInput, db: sqlite3.Connection = Depends(get_db
         advice_parts.append(f"Thank you for sharing your query. Based on your statement (<em>\"{symptoms_text}\"</em>), we recommend monitoring your overall vitals (temperature, hydration, sleep). If you are experiencing discomfort, our certified General Physicians are available for instant video or chat consultation.")
         follow_up_questions = ["Fever and shivering", "Headache and eye strain", "Cold, cough and throat pain", "Stomach ache and indigestion"]
         rec_doctor_id = "DOC-201"
-        matched_med_names.extend(["Dolo 650", "VitaCore Plus"])
+        matched_med_names.extend(["VitaCore Plus"])
 
     # Deduplicate lists
     possible_conditions = list(dict.fromkeys(possible_conditions))

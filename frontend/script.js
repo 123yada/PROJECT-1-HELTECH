@@ -1144,6 +1144,9 @@ const consultationsList = document.getElementById("consultationsList");
 const navConsultationsBtn = document.getElementById("navConsultationsBtn");
 
 let activeConsultationId = null;
+let activeVideoConsultation = null;
+let isCompletingVideoCall = false;
+const ACTIVE_VIDEO_CONSULTATION_KEY = "antigravity_active_video_consultation";
 window.localMediaStream = null;
 window.activeCallInterval = null;
 let isMicMuted = false;
@@ -1411,18 +1414,40 @@ window.startLiveVideoCall = async function (docObj) {
       body: JSON.stringify({ user_id: activeUser.uid, doctor_id: doc.id, consultation_type: "Video Call" })
     });
     const data = await res.json();
-    if (data.consultation_id) activeConsultationId = data.consultation_id;
-  } catch (e) {}
+    if (!res.ok || !data.consultation_id) throw new Error(data.detail || "Could not start video consultation");
+    activeConsultationId = data.consultation_id;
+    selectedDoctor = {
+      id: data.doctor_id || doc.id,
+      name: data.doctor_name || doc.name,
+      specialization: data.specialization || doc.specialization,
+      image: doc.image
+    };
+    activeVideoConsultation = {
+      consultation_id: data.consultation_id,
+      call_session_id: data.call_session_id || null,
+      user_id: activeUser.uid,
+      doctor_id: selectedDoctor.id,
+      doctor_name: selectedDoctor.name,
+      specialization: selectedDoctor.specialization,
+      status: "Active"
+    };
+    localStorage.setItem(ACTIVE_VIDEO_CONSULTATION_KEY, JSON.stringify(activeVideoConsultation));
+  } catch (e) {
+    showToast(e.message, true);
+    return;
+  }
 
   if (videoDocName) videoDocName.textContent = `Consultation with ${doc.name}`;
   if (videoDocSpec) videoDocSpec.textContent = `${doc.specialization} · Live Video Call`;
   if (videoFeedDocLabel) videoFeedDocLabel.textContent = `${doc.name} (Live Stream)`;
 
   const docVideoFeed = document.getElementById("docVideoFeed");
-  const doctorImgUrl = doc.image || selectedDoctor.image || (window.globalDoctorsMap && window.globalDoctorsMap[doc.id] ? window.globalDoctorsMap[doc.id].image : null) || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=800&h=600&fit=crop";
+  const doctorImgUrl = doc.image || "images/doc_video_stream.jpg";
   if (docVideoFeed) {
     docVideoFeed.src = doctorImgUrl;
     docVideoFeed.alt = `${doc.name} Live Stream Feed`;
+    docVideoFeed.style.objectFit = "cover";
+    docVideoFeed.style.objectPosition = "center top";
   }
 
   if (videoCallModal) videoCallModal.style.display = "flex";
@@ -1475,7 +1500,48 @@ window.startLiveVideoCall = async function (docObj) {
   }
 };
 
-window.stopVideoCall = function () {
+window.stopVideoCall = async function () {
+  if (isCompletingVideoCall) return;
+  if (!activeVideoConsultation || !activeConsultationId) {
+    showToast("No active video consultation found.", true);
+    return;
+  }
+  isCompletingVideoCall = true;
+  if (endCallBtn) setLoading(endCallBtn, true);
+  try {
+    const activeUser = getActiveUser();
+    const res = await fetch(apiUrl(`/api/consultations/${activeConsultationId}/complete`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: activeUser?.uid, call_session_id: activeVideoConsultation.call_session_id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not complete video consultation");
+    const completed = data.consultation;
+    activeVideoConsultation = {
+      ...activeVideoConsultation,
+      status: completed.status,
+      completed_at: completed.completed_at,
+      doctor_id: completed.doctor_id,
+      doctor_name: completed.doctor_name,
+      specialization: completed.specialization,
+      call_session_id: completed.call_session_id
+    };
+    localStorage.setItem(ACTIVE_VIDEO_CONSULTATION_KEY, JSON.stringify(activeVideoConsultation));
+    selectedDoctor = {
+      id: completed.doctor_id,
+      name: completed.doctor_name,
+      specialization: completed.specialization,
+      image: selectedDoctor.image
+    };
+  } catch (err) {
+    showToast(err.message, true);
+    return;
+  } finally {
+    if (endCallBtn) setLoading(endCallBtn, false);
+    isCompletingVideoCall = false;
+  }
+
   if (window.activeCallInterval) {
     clearInterval(window.activeCallInterval);
     window.activeCallInterval = null;
@@ -1488,11 +1554,8 @@ window.stopVideoCall = function () {
     localVideoFeed.srcObject = null;
   }
   if (videoCallModal) videoCallModal.style.display = "none";
-  showToast("📞 Video call ended. Opening Create Digital Prescription...");
-
-  const doc = selectedDoctor || { id: "DOC-201", name: "Dr. Rajesh Kumar", specialization: "General Physician (Fever, Cold, Cough & Viral Flu)" };
-
-  // Directly display the "Create Digital Prescription" modal immediately
+  showToast("📞 Video consultation completed. Opening Digital Prescription...");
+  const doc = selectedDoctor;
   window.openCreatePrescriptionModal(
     doc.id,
     doc.name,
@@ -1528,17 +1591,390 @@ if (camBtn) {
 
 if (videoPrescriptionBtn) {
   videoPrescriptionBtn.addEventListener("click", () => {
-    window.openCreatePrescriptionModal(
-      selectedDoctor.id,
-      selectedDoctor.name,
-      selectedDoctor.specialization,
-      "Video Consultation: Acute Illness Assessment & Treatment"
-    );
+    showToast("Please end the video call before creating a prescription.", true);
   });
 }
 
-// ── Digital Prescription Creation Module ────────────────────
-window.openCreatePrescriptionModal = function (docId, docName, docSpec, defaultDiagnosis) {
+// ── CLINICAL DECISION ENGINE & DYNAMIC PRESCRIPTION SYSTEM ──────
+
+// Master Medication Knowledge Base (All Available Pharmacy Items)
+const MASTER_MEDICATIONS_DB = [
+  { value: "Paracetamol 500mg", label: "Paracetamol 500mg (Fever & Mild Pain)", category: "Antipyretic / Analgesic", defaultDose: "1 tablet (500mg)", defaultFreq: "Three times a day after food (1-1-1)", defaultDur: "3-5 days", instructions: "Take with plain water after food. Do not exceed 4g/day." },
+  { value: "Dolo 650", label: "Dolo 650 (Paracetamol 650mg - High Fever)", category: "Antipyretic", defaultDose: "1 tablet (650mg)", defaultFreq: "Twice daily after food (1-0-1)", defaultDur: "3 days", instructions: "For high fever (>100.5°F). Take with meals. Max 3 tablets/day." },
+  { value: "Saline Nasal Drops", label: "Saline Nasal Drops (Cold & Congestion)", category: "Nasal Decongestant", defaultDose: "2 drops per nostril", defaultFreq: "Three times daily (1-1-1)", defaultDur: "5 days", instructions: "Instill drops in both nostrils before sleeping or when congested." },
+  { value: "Astra-Zen Clear", label: "Astra-Zen Clear (Cough & Cold Syrup)", category: "Expectorant Syrup", defaultDose: "10 ml syrup", defaultFreq: "Three times daily (1-1-1)", defaultDur: "5 days", instructions: "Shake bottle well. Take warm water after syrup." },
+  { value: "Dextromethorphan Syrup", label: "Dextromethorphan Syrup (Dry Cough)", category: "Antitussive Syrup", defaultDose: "5-10 ml syrup", defaultFreq: "Twice daily (1-0-1)", defaultDur: "5 days", instructions: "For dry tickly cough. Avoid cold drinks." },
+  { value: "Guaifenesin Syrup", label: "Guaifenesin Syrup (Productive Wet Cough)", category: "Mucolytic Expectorant", defaultDose: "10 ml syrup", defaultFreq: "Three times daily (1-1-1)", defaultDur: "5 days", instructions: "Helps loosen phlegm. Drink plenty of warm water." },
+  { value: "Antiseptic Throat Gargle", label: "Povidone-Iodine Throat Gargle", category: "Antiseptic Gargle", defaultDose: "10 ml in warm water", defaultFreq: "Three times daily (1-1-1)", defaultDur: "4 days", instructions: "Gargle for 30 seconds and spit out. Do not swallow." },
+  { value: "Neuro-Sync", label: "Neuro-Sync (Headache & Migraine Support)", category: "Analgesic / Neuro Support", defaultDose: "1 capsule", defaultFreq: "Once daily morning (1-0-0)", defaultDur: "5 days", instructions: "Take with morning breakfast and plenty of water." },
+  { value: "PainAway Pro", label: "PainAway Pro (Ibuprofen 400mg Pain Reliever)", category: "NSAID Analgesic", defaultDose: "1 tablet (400mg)", defaultFreq: "Twice daily after meals (1-0-1)", defaultDur: "3 days", instructions: "Must be taken strictly after full meals to protect stomach." },
+  { value: "Gravity-Fix Gel", label: "Gravity-Fix (Topical Pain Relief Gel)", category: "Topical Gel", defaultDose: "Apply thin layer", defaultFreq: "Twice daily (1-0-1)", defaultDur: "5 days", instructions: "Gently rub over affected painful muscle. Wash hands after use." },
+  { value: "Digene Gel", label: "Digene Antacid Gel (Acidity & Heartburn)", category: "Antacid Neutralizer", defaultDose: "2 teaspoonfuls (10ml)", defaultFreq: "After meals & bedtime (1-1-1)", defaultDur: "5 days", instructions: "Chew/swallow antacid gel 30 mins after meals when acid flares." },
+  { value: "Famotidine 20mg", label: "Famotidine 20mg (Acid Reflux & GERD)", category: "H2 Blocker", defaultDose: "1 tablet (20mg)", defaultFreq: "Twice daily before food (1-0-1)", defaultDur: "7 days", instructions: "Take 30 mins before breakfast and dinner." },
+  { value: "Fungal Diastase + Pepsin", label: "Digestive Enzyme Syrup (Indigestion & Gas)", category: "Digestive Enzymes", defaultDose: "5 ml syrup", defaultFreq: "Twice daily after meals (1-0-1)", defaultDur: "5 days", instructions: "Take immediately after principal heavy meals." },
+  { value: "WHO ORS Electrolyte Powder", label: "WHO Oral Rehydration Solution (ORS)", category: "Oral Rehydration", defaultDose: "1 sachet in 1 Litre clean water", defaultFreq: "Sip continuously throughout day", defaultDur: "3 days", instructions: "Dissolve entire packet in 1L fresh water. Sip after every loose stool." },
+  { value: "Saccharomyces Boulardii", label: "Probiotic Sachet (Diarrhea & Gut Care)", category: "Probiotic", defaultDose: "1 sachet in water", defaultFreq: "Twice daily (1-0-1)", defaultDur: "5 days", instructions: "Mix with room temperature water or yogurt." },
+  { value: "Isabgol (Psyllium Husk)", label: "Isabgol / Psyllium Husk (Constipation)", category: "Bulk Fiber Laxative", defaultDose: "2 teaspoonfuls in warm water", defaultFreq: "Once daily at bedtime (0-0-1)", defaultDur: "7 days", instructions: "Mix in full glass of water/milk and drink immediately at bedtime." },
+  { value: "Lactulose Syrup", label: "Lactulose Syrup 15ml (Constipation)", category: "Osmotic Laxative", defaultDose: "15 ml syrup", defaultFreq: "Once daily at bedtime (0-0-1)", defaultDur: "5 days", instructions: "Take at night with water. Adequate fluid intake required." },
+  { value: "AllerShield", label: "AllerShield (Cetirizine 10mg - Allergy)", category: "Antihistamine", defaultDose: "1 tablet (10mg)", defaultFreq: "Once daily at bedtime (0-0-1)", defaultDur: "5 days", instructions: "Take at night. May cause mild drowsiness." },
+  { value: "VitaCore Plus", label: "VitaCore Plus (Multivitamin & Zinc Support)", category: "Nutritional Supplement", defaultDose: "1 tablet", defaultFreq: "Once daily morning (1-0-0)", defaultDur: "10 days", instructions: "Take after breakfast to support overall recovery." },
+  { value: "CalmWave", label: "CalmWave (Stress & Tension Relief)", category: "Herbal Anxiolytic", defaultDose: "1 tablet", defaultFreq: "Twice daily (1-0-1)", defaultDur: "7 days", instructions: "Take with warm milk or water after food." }
+];
+
+// Clinical Decision Engine
+function runClinicalAssessment(complaintText = "", symptomsText = "", age = 30, weight = 60, allergies = "", pregnancyStatus = "No") {
+  const text = `${complaintText} ${symptomsText}`.toLowerCase();
+  
+  let result = {
+    diagnosis: complaintText || "General Medical Ailment",
+    isRedFlag: false,
+    redFlagMessage: "",
+    isPediatric: (age > 0 && age < 12),
+    pediatricWarning: "",
+    suggestedMedicines: [],
+    supportiveCare: "Maintain adequate bed rest, stay hydrated with clean warm fluids, and eat easily digestible foods."
+  };
+
+  // 1. Red Flag & Emergency Safety Evaluation
+  const redFlags = [];
+  if (text.includes("chest pain") || text.includes("heart pain") || text.includes("breathless") || text.includes("shortness of breath") || text.includes("difficulty breathing") || text.includes("gasping")) {
+    redFlags.push("Severe respiratory / chest discomfort");
+  }
+  if (text.includes("anaphylaxis") || text.includes("swelling of tongue") || text.includes("swelling of throat") || text.includes("lip swelling")) {
+    redFlags.push("Possible severe allergic anaphylaxis");
+  }
+  if (text.includes("thunderclap") || text.includes("sudden worst headache") || text.includes("stiff neck with fever") || text.includes("fainting")) {
+    redFlags.push("Acute neurological red flag");
+  }
+  if (text.includes("vomiting blood") || text.includes("black stool") || text.includes("blood in stool") || text.includes("blood in vomit")) {
+    redFlags.push("Gastrointestinal bleeding warning sign");
+  }
+  if (text.includes("severe dehydration") || text.includes("unconscious") || text.includes("confusion")) {
+    redFlags.push("Severe systemic / metabolic emergency");
+  }
+
+  if (redFlags.length > 0) {
+    result.isRedFlag = true;
+    result.redFlagMessage = `⚠️ URGENT MEDICAL EVALUATION REQUIRED: Detected emergency warning sign (${redFlags.join(", ")}). Automated self-medication is contraindicated. Please seek immediate emergency medical care or visit a hospital.`;
+    result.suggestedMedicines = [];
+    result.supportiveCare = "Seek emergency medical intervention immediately. Keep patient calm and seated upright.";
+    return result;
+  }
+
+  // 2. Pediatric Check (Age < 12)
+  if (result.isPediatric) {
+    result.pediatricWarning = `⚠️ Pediatric Patient (Age ${age}): Tablet formulations are contraindicated. Requires weight-based liquid/syrup dosing strictly under a pediatrician's evaluation.`;
+  }
+
+  // 3. Condition Pathways & Medication Matching
+
+  // A. Fever / Febrile Illness
+  if (text.includes("fever") || text.includes("temperature") || text.includes("chills") || text.includes("pyrexia") || text.includes("bukhar")) {
+    result.diagnosis = complaintText || "Viral Febrile Episode";
+    result.supportiveCare = "Drink plenty of warm fluids (water, ORS, soups). Rest in a cool, well-ventilated room. Monitor body temperature every 4 hours. Sponge with lukewarm water if temperature exceeds 101°F.";
+    if (!result.isPediatric) {
+      result.suggestedMedicines.push({
+        name: "Paracetamol 500mg",
+        dosage: "1 tablet (500mg)",
+        frequency: "Three times daily after food (1-1-1)",
+        duration: "3 days",
+        instructions: "Take after meals if temperature > 99.5°F. Max 3g daily."
+      });
+    }
+  }
+  // B. Acidity / Heartburn / GERD
+  else if (text.includes("acidity") || text.includes("heartburn") || text.includes("acid") || text.includes("reflux") || text.includes("gerd") || text.includes("burning chest")) {
+    result.diagnosis = complaintText || "Gastric Hyperacidity & Acid Reflux";
+    result.supportiveCare = "Eat small, frequent, non-spicy meals. Do not lie down for 2-3 hours after eating. Elevate head end of bed. Avoid tea, coffee, sodas, citrus fruits, and fried food.";
+    result.suggestedMedicines.push({
+      name: "Digene Gel",
+      dosage: "2 teaspoonfuls (10ml)",
+      frequency: "Three times daily after food (1-1-1)",
+      duration: "5 days",
+      instructions: "Take 30 mins after meals and at bedtime when heartburn flares."
+    });
+    result.suggestedMedicines.push({
+      name: "Famotidine 20mg",
+      dosage: "1 tablet (20mg)",
+      frequency: "Twice daily before food (1-0-1)",
+      duration: "7 days",
+      instructions: "Take 30 mins before breakfast and dinner."
+    });
+  }
+  // C. Indigestion / Gastric Gas
+  else if (text.includes("indigestion") || text.includes("gas") || text.includes("bloating") || text.includes("fullness") || text.includes("burping")) {
+    result.diagnosis = complaintText || "Functional Indigestion & Dyspepsia";
+    result.supportiveCare = "Chew food slowly and thoroughly. Sip warm ginger water. Take a light 10-minute walk after meals.";
+    result.suggestedMedicines.push({
+      name: "Fungal Diastase + Pepsin",
+      dosage: "5 ml syrup",
+      frequency: "Twice daily after meals (1-0-1)",
+      duration: "5 days",
+      instructions: "Take immediately after principal heavy meals."
+    });
+  }
+  // D. Cough (Dry vs Productive)
+  else if (text.includes("cough") || text.includes("khasi") || text.includes("phlegm") || text.includes("mucus")) {
+    if (text.includes("dry") || text.includes("tickle") || text.includes("scratchy")) {
+      result.diagnosis = complaintText || "Dry Hacking Cough";
+      result.supportiveCare = "Inhale steam twice daily. Sip warm water with honey (for adults). Keep indoor air humidified.";
+      result.suggestedMedicines.push({
+        name: "Dextromethorphan Syrup",
+        dosage: "10 ml syrup",
+        frequency: "Twice daily (1-0-1)",
+        duration: "5 days",
+        instructions: "Take after meals. Avoid cold water."
+      });
+    } else {
+      result.diagnosis = complaintText || "Productive Wet Cough";
+      result.supportiveCare = "Hydrate adequately with warm fluids to help loosen sputum secretions. Perform steam inhalation.";
+      result.suggestedMedicines.push({
+        name: "Guaifenesin Syrup",
+        dosage: "10 ml syrup",
+        frequency: "Three times daily (1-1-1)",
+        duration: "5 days",
+        instructions: "Helps expel mucus. Drink plenty of warm water."
+      });
+    }
+  }
+  // E. Common Cold & Nasal Congestion
+  else if (text.includes("cold") || text.includes("runny nose") || text.includes("sneezing") || text.includes("blocked nose") || text.includes("congestion")) {
+    result.diagnosis = complaintText || "Acute Viral Upper Respiratory Cold";
+    result.supportiveCare = "Perform steam inhalation twice daily. Rest adequately. Sip warm broths and herbal teas. Use extra pillows under head.";
+    result.suggestedMedicines.push({
+      name: "Saline Nasal Drops",
+      dosage: "2 drops per nostril",
+      frequency: "Three times daily (1-1-1)",
+      duration: "5 days",
+      instructions: "Instill in both nostrils to clear nasal blockage naturally."
+    });
+  }
+  // F. Sore Throat
+  else if (text.includes("sore throat") || text.includes("throat pain") || text.includes("gala") || text.includes("tonsil")) {
+    result.diagnosis = complaintText || "Acute Viral Sore Throat / Pharyngitis";
+    result.supportiveCare = "Gargle with warm salt water (1/2 tsp salt in 1 glass warm water) 3-4 times daily. Sip warm soothing liquids.";
+    result.suggestedMedicines.push({
+      name: "Antiseptic Throat Gargle",
+      dosage: "10 ml diluted in warm water",
+      frequency: "Three times daily (1-1-1)",
+      duration: "4 days",
+      instructions: "Gargle thoroughly for 30 seconds and spit out. Do not swallow."
+    });
+  }
+  // G. Headache
+  else if (text.includes("headache") || text.includes("head pain") || text.includes("migraine") || text.includes("sar dard")) {
+    result.diagnosis = complaintText || "Tension Headache / Mild Cephalea";
+    result.supportiveCare = "Rest in a quiet, dim room. Apply a cool compress to forehead. Hydrate immediately with 2 glasses of water and limit screen time.";
+    if (!result.isPediatric) {
+      result.suggestedMedicines.push({
+        name: "Paracetamol 500mg",
+        dosage: "1 tablet (500mg)",
+        frequency: "As needed for pain (SOS / Max 3/day)",
+        duration: "2 days",
+        instructions: "Take with water after food only if headache is intense."
+      });
+    }
+  }
+  // H. Diarrhea & Loose Motions
+  else if (text.includes("diarrhea") || text.includes("loose motion") || text.includes("watery stool") || text.includes("cramps")) {
+    result.diagnosis = complaintText || "Acute Gastroenteritis & Diarrhea";
+    result.supportiveCare = "Prevent dehydration: Drink WHO ORS solution continuously after every loose stool. Eat bland BRAT foods (Banana, Rice, Applesauce, Toast). Avoid dairy, spicy foods, and fruit juices.";
+    result.suggestedMedicines.push({
+      name: "WHO ORS Electrolyte Powder",
+      dosage: "1 sachet in 1 Litre clean water",
+      frequency: "Sip continuously after every loose stool",
+      duration: "3 days",
+      instructions: "Dissolve 1 full sachet in 1L fresh water. Sip regularly throughout the day."
+    });
+    result.suggestedMedicines.push({
+      name: "Saccharomyces Boulardii",
+      dosage: "1 sachet",
+      frequency: "Twice daily (1-0-1)",
+      duration: "5 days",
+      instructions: "Mix in plain water or curd to restore healthy gut microflora."
+    });
+  }
+  // I. Constipation
+  else if (text.includes("constipation") || text.includes("hard stool") || text.includes("straining")) {
+    result.diagnosis = complaintText || "Functional Constipation";
+    result.supportiveCare = "Increase dietary fiber intake (whole grains, green vegetables, fruits). Drink 8-10 glasses of water daily. Walk for 20-30 minutes daily.";
+    result.suggestedMedicines.push({
+      name: "Isabgol (Psyllium Husk)",
+      dosage: "2 teaspoonfuls",
+      frequency: "Once daily at bedtime (0-0-1)",
+      duration: "7 days",
+      instructions: "Mix in a full glass of warm water or milk and drink immediately at bedtime."
+    });
+  }
+  // J. Mild Allergy & Rash
+  else if (text.includes("allergy") || text.includes("hives") || text.includes("rash") || text.includes("itching") || text.includes("khujli")) {
+    result.diagnosis = complaintText || "Allergic Dermatitis & Urticaria";
+    result.supportiveCare = "Identify and avoid triggering allergens. Wear loose cotton clothes. Apply cold soothing compresses to itchy areas.";
+    result.suggestedMedicines.push({
+      name: "AllerShield",
+      dosage: "1 tablet (10mg)",
+      frequency: "Once daily at bedtime (0-0-1)",
+      duration: "5 days",
+      instructions: "Take at night with water. May cause mild drowsiness."
+    });
+  }
+  // K. Muscle & Body Pain
+  else if (text.includes("body pain") || text.includes("muscle pain") || text.includes("body ache") || text.includes("back pain") || text.includes("joint pain")) {
+    result.diagnosis = complaintText || "Musculoskeletal Myalgia & Fatigue";
+    result.supportiveCare = "Apply RICE protocol (Rest, Ice/Warm compress, Compression, Elevation). Perform gentle passive stretching. Avoid heavy lifting.";
+    result.suggestedMedicines.push({
+      name: "Gravity-Fix Gel",
+      dosage: "Apply thin layer",
+      frequency: "Twice daily (1-0-1)",
+      duration: "5 days",
+      instructions: "Gently apply over painful muscle area. Wash hands thoroughly after application."
+    });
+  }
+  // L. Fallback / General
+  else {
+    result.diagnosis = complaintText || "General Primary Consultation";
+    result.supportiveCare = "Rest adequately, maintain healthy hydration, and monitor your vitals. Review with physician if discomfort persists.";
+    result.suggestedMedicines.push({
+      name: "VitaCore Plus",
+      dosage: "1 tablet",
+      frequency: "Once daily morning (1-0-0)",
+      duration: "10 days",
+      instructions: "Take after breakfast to support overall nutritional recovery."
+    });
+  }
+
+  return result;
+}
+
+// Master Dropdown Options HTML Generator
+function getMedicationSelectOptionsHtml(selectedMedName = "") {
+  return MASTER_MEDICATIONS_DB.map(med => `
+    <option value="${med.value}" ${med.value === selectedMedName ? "selected" : ""}>
+      ${med.label}
+    </option>
+  `).join("");
+}
+
+// Helper to create a single row for #prescMedRowsContainer
+function createPrescriptionMedicineRowHtml(selectedMedName = "", dosage = "", freq = "", dur = "") {
+  // If no med selected, pick first
+  const targetMed = MASTER_MEDICATIONS_DB.find(m => m.value === selectedMedName) || MASTER_MEDICATIONS_DB[0];
+  
+  const finalDosage = dosage || targetMed.defaultDose;
+  const finalFreq = freq || targetMed.defaultFreq;
+  const finalDur = dur || targetMed.defaultDur;
+
+  return `
+    <div class="presc-med-row" style="background: var(--bg); padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); display:grid; grid-template-columns: 2fr 1.2fr 1.5fr 1fr auto; gap: 0.6rem; align-items: end;">
+        <div>
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Medicine Name</label>
+            <select class="rx-med-name" onchange="if(window.onRxMedSelectionChange) window.onRxMedSelectionChange(this)" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
+                ${getMedicationSelectOptionsHtml(targetMed.value)}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Dosage</label>
+            <input type="text" class="rx-med-dosage" value="${finalDosage}" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Frequency</label>
+            <select class="rx-med-freq" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
+                <option value="Twice daily after meals (1-0-1)" ${finalFreq.includes("1-0-1") ? "selected" : ""}>Twice daily after food (1-0-1)</option>
+                <option value="Three times a day (1-1-1)" ${finalFreq.includes("1-1-1") ? "selected" : ""}>Three times a day (1-1-1)</option>
+                <option value="Once daily at bedtime (0-0-1)" ${finalFreq.includes("0-0-1") ? "selected" : ""}>Once daily at bedtime (0-0-1)</option>
+                <option value="Once daily morning (1-0-0)" ${finalFreq.includes("1-0-0") ? "selected" : ""}>Once daily morning (1-0-0)</option>
+                <option value="Sip continuously after loose stool" ${finalFreq.includes("Sip") ? "selected" : ""}>Sip continuously after loose stool</option>
+                <option value="As needed for pain / fever (SOS)" ${finalFreq.includes("SOS") ? "selected" : ""}>As needed (SOS / Max 3/day)</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Duration</label>
+            <input type="text" class="rx-med-dur" value="${finalDur}" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
+        </div>
+        <button type="button" class="remove-rx-row-btn" style="background:none; border:none; color:var(--red); font-size:1.2rem; cursor:pointer; padding:0 4px; line-height:1;" title="Remove row">✕</button>
+    </div>
+  `;
+}
+
+// When doctor changes selected medicine in row, auto-fill default dose & freq for that specific med
+window.onRxMedSelectionChange = function(selectElem) {
+  const row = selectElem.closest(".presc-med-row");
+  if (!row) return;
+
+  const val = selectElem.value;
+  const medObj = MASTER_MEDICATIONS_DB.find(m => m.value === val);
+  if (medObj) {
+    const dosageInput = row.querySelector(".rx-med-dosage");
+    const durInput = row.querySelector(".rx-med-dur");
+    if (dosageInput) dosageInput.value = medObj.defaultDose;
+    if (durInput) durInput.value = medObj.defaultDur;
+  }
+};
+
+// Dynamic Prescription Diagnosis Tag Clicked
+window.updatePrescriptionDiagnosis = function(newDiagnosis) {
+  const prescDiagnosis = document.getElementById("prescDiagnosis");
+  if (prescDiagnosis) prescDiagnosis.value = newDiagnosis;
+  
+  // Re-run assessment and populate prescription modal rows
+  populatePrescriptionModalForComplaint(newDiagnosis);
+};
+
+// Internal function to populate prescription modal dynamically based on patient complaint
+function populatePrescriptionModalForComplaint(complaintText = "", symptomsText = "", age = 30, weight = 60, allergies = "", pregnancyStatus = "No") {
+  const assessment = runClinicalAssessment(complaintText, symptomsText, age, weight, allergies, pregnancyStatus);
+
+  const prescDiagnosis = document.getElementById("prescDiagnosis");
+  const prescInstructions = document.getElementById("prescInstructions");
+  const prescSafetyBanner = document.getElementById("prescSafetyBanner");
+  const container = document.getElementById("prescMedRowsContainer");
+
+  if (prescDiagnosis) prescDiagnosis.value = assessment.diagnosis;
+  if (prescInstructions) prescInstructions.value = assessment.supportiveCare;
+
+  // Handle Safety Banner (Red flags or Pediatric Warnings)
+  if (prescSafetyBanner) {
+    if (assessment.isRedFlag) {
+      prescSafetyBanner.style.display = "block";
+      prescSafetyBanner.style.background = "#fef2f2";
+      prescSafetyBanner.style.border = "1.5px solid #fecaca";
+      prescSafetyBanner.style.color = "#991b1b";
+      prescSafetyBanner.innerHTML = assessment.redFlagMessage;
+    } else if (assessment.isPediatric) {
+      prescSafetyBanner.style.display = "block";
+      prescSafetyBanner.style.background = "#fffbeb";
+      prescSafetyBanner.style.border = "1.5px solid #fde68a";
+      prescSafetyBanner.style.color = "#92400e";
+      prescSafetyBanner.innerHTML = assessment.pediatricWarning;
+    } else {
+      prescSafetyBanner.style.display = "none";
+      prescSafetyBanner.innerHTML = "";
+    }
+  }
+
+  // Populate Medicine Rows
+  if (container) {
+    container.innerHTML = "";
+
+    if (assessment.isRedFlag || assessment.suggestedMedicines.length === 0) {
+      // Empty placeholder prompt
+      container.innerHTML = `
+        <div style="padding: 1rem; background: var(--bg); border: 1.5px dashed var(--border); border-radius: var(--radius-sm); text-align: center; color: var(--text-mid); font-size: 0.88rem;">
+          ${assessment.isRedFlag ? '🚨 <strong>Emergency Warning Active:</strong> Routine automated medicines suppressed. Doctor may manually click "+ Add Medicine" after clinical evaluation.' : '🌱 <strong>Supportive Care Recommended:</strong> No automatic medications needed. Click "+ Add Medicine" above to prescribe manually if clinically indicated.'}
+        </div>
+      `;
+    } else {
+      assessment.suggestedMedicines.forEach(m => {
+        const div = document.createElement("div");
+        div.innerHTML = createPrescriptionMedicineRowHtml(m.name, m.dosage, m.frequency, m.duration);
+        container.appendChild(div.firstElementChild);
+      });
+    }
+  }
+}
+
+// ── Open Digital Prescription Modal ─────────────────────────
+window.openCreatePrescriptionModal = function (docId, docName, docSpec, defaultDiagnosis, symptomsText = "", age = 30, weight = 60, allergies = "", pregnancyStatus = "No") {
   const activeUser = getActiveUser();
   if (!activeUser) {
     showToast("⚠️ Please login to generate prescription.", true);
@@ -1546,12 +1982,17 @@ window.openCreatePrescriptionModal = function (docId, docName, docSpec, defaultD
     return;
   }
 
+  const prescDocName = document.getElementById("prescDocName");
+  const prescDocSpec = document.getElementById("prescDocSpec");
+
   if (prescDocName) prescDocName.textContent = docName || selectedDoctor.name;
   if (prescDocSpec) prescDocSpec.textContent = docSpec || selectedDoctor.specialization;
+  
   const patientInput = document.getElementById("patientName");
   if (patientInput) patientInput.value = activeUser.email.split("@")[0].replace(/\./g, " ").toUpperCase();
-  if (prescDiagnosis) prescDiagnosis.value = defaultDiagnosis || "Viral Fever with Cold & Body Pain";
-  if (prescInstructions) prescInstructions.value = "Drink plenty of warm water. Rest adequately and take light, easily digestible meals. Avoid cold drinks. Review with doctor if fever persists beyond 3 days.";
+
+  // Populate dynamic diagnosis, safety warnings, and condition-matched medicines
+  populatePrescriptionModalForComplaint(defaultDiagnosis || "Viral Fever with Cold", symptomsText, age, weight, allergies, pregnancyStatus);
 
   if (prescriptionModal) prescriptionModal.style.display = "flex";
 };
@@ -1562,53 +2003,10 @@ if (closePrescriptionModal) {
   });
 }
 
-function createPrescriptionMedicineRowHtml(selectedMed = "Dolo 650", dosage = "1 tablet (650mg)", freq = "Twice daily after meals (1-0-1)", dur = "5 days") {
-  return `
-    <div class="presc-med-row" style="background: var(--bg); padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); display:grid; grid-template-columns: 2fr 1.2fr 1.5fr 1fr auto; gap: 0.6rem; align-items: end;">
-        <div>
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Medicine Name</label>
-            <select class="rx-med-name" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
-                <option value="Dolo 650" ${selectedMed === "Dolo 650" ? "selected" : ""}>Dolo 650 (Paracetamol 650mg)</option>
-                <option value="Paracetamol 500mg" ${selectedMed === "Paracetamol 500mg" ? "selected" : ""}>Paracetamol 500mg (Fever & Pain)</option>
-                <option value="Crocin Advance" ${selectedMed === "Crocin Advance" ? "selected" : ""}>Crocin Advance (Fast Relief)</option>
-                <option value="Astra-Zen Clear" ${selectedMed === "Astra-Zen Clear" ? "selected" : ""}>Astra-Zen Clear (Flu & Fever)</option>
-                <option value="Neuro-Sync" ${selectedMed === "Neuro-Sync" ? "selected" : ""}>Neuro-Sync (Headache & Focus)</option>
-                <option value="Gravity-Fix" ${selectedMed === "Gravity-Fix" ? "selected" : ""}>Gravity-Fix (Muscle Gel)</option>
-                <option value="BioShield-X" ${selectedMed === "BioShield-X" ? "selected" : ""}>BioShield-X (Antibiotic)</option>
-                <option value="PainAway Pro" ${selectedMed === "PainAway Pro" ? "selected" : ""}>PainAway Pro (Pain Relief)</option>
-                <option value="GlucoBalance" ${selectedMed === "GlucoBalance" ? "selected" : ""}>GlucoBalance (Blood Sugar)</option>
-                <option value="CalmWave" ${selectedMed === "CalmWave" ? "selected" : ""}>CalmWave (Stress & Anxiety)</option>
-                <option value="AllerShield" ${selectedMed === "AllerShield" ? "selected" : ""}>AllerShield (Antihistamine)</option>
-                <option value="VitaCore Plus" ${selectedMed === "VitaCore Plus" ? "selected" : ""}>VitaCore Plus (Multivitamin)</option>
-            </select>
-        </div>
-        <div>
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Dosage</label>
-            <input type="text" class="rx-med-dosage" value="${dosage}" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
-        </div>
-        <div>
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Frequency</label>
-            <select class="rx-med-freq" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; background:#fff;">
-                <option value="Twice daily after meals (1-0-1)" ${freq.includes("1-0-1") ? "selected" : ""}>Twice daily after food (1-0-1)</option>
-                <option value="Three times a day (1-1-1)" ${freq.includes("1-1-1") ? "selected" : ""}>Three times a day (1-1-1)</option>
-                <option value="Once daily at bedtime (0-0-1)" ${freq.includes("0-0-1") ? "selected" : ""}>Once daily at bedtime (0-0-1)</option>
-                <option value="Once daily morning (1-0-0)" ${freq.includes("1-0-0") ? "selected" : ""}>Once daily morning (1-0-0)</option>
-                <option value="As needed for pain / fever (SOS)" ${freq.includes("SOS") ? "selected" : ""}>As needed (SOS / Max 3/day)</option>
-            </select>
-        </div>
-        <div>
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-mid); display:block; margin-bottom:2px;">Duration</label>
-            <input type="text" class="rx-med-dur" value="${dur}" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem;">
-        </div>
-        <button type="button" class="remove-rx-row-btn" style="background:none; border:none; color:var(--red); font-size:1.2rem; cursor:pointer; padding:0 4px; line-height:1;" title="Remove row">✕</button>
-    </div>
-  `;
-}
-
 if (addPrescMedRowBtn && prescMedRowsContainer) {
   addPrescMedRowBtn.addEventListener("click", () => {
     const div = document.createElement("div");
-    div.innerHTML = createPrescriptionMedicineRowHtml("Paracetamol 500mg", "1 tablet (500mg)", "Three times a day (1-1-1)", "3 days");
+    div.innerHTML = createPrescriptionMedicineRowHtml("VitaCore Plus", "1 tablet", "Once daily morning (1-0-0)", "7 days");
     prescMedRowsContainer.appendChild(div.firstElementChild);
   });
 
@@ -1616,10 +2014,10 @@ if (addPrescMedRowBtn && prescMedRowsContainer) {
     const removeBtn = e.target.closest(".remove-rx-row-btn");
     if (removeBtn) {
       const rows = prescMedRowsContainer.querySelectorAll(".presc-med-row");
-      if (rows.length > 1) {
+      if (rows.length > 0) {
         removeBtn.closest(".presc-med-row").remove();
       } else {
-        showToast("At least one medicine is required in prescription.", true);
+        showToast("No medicine rows to remove.", true);
       }
     }
   });
@@ -1642,8 +2040,8 @@ if (savePrescriptionBtn) {
     const medRows = document.querySelectorAll("#prescMedRowsContainer .presc-med-row");
     const medicinesList = [];
     medRows.forEach(row => {
-      const name = row.querySelector(".rx-med-name")?.value || "Dolo 650";
-      const dosage = row.querySelector(".rx-med-dosage")?.value || "1 tablet";
+      const name = row.querySelector(".rx-med-name")?.value || "General Medicine";
+      const dosage = row.querySelector(".rx-med-dosage")?.value || "1 dose";
       const freq = row.querySelector(".rx-med-freq")?.value || "Twice daily";
       const dur = row.querySelector(".rx-med-dur")?.value || "5 days";
       medicinesList.push({
@@ -1651,14 +2049,9 @@ if (savePrescriptionBtn) {
         dosage: dosage,
         frequency: freq,
         duration: dur,
-        instructions: "Take with warm water after meals"
+        instructions: "Take after meals with water as advised"
       });
     });
-
-    if (medicinesList.length === 0) {
-      showToast("Please prescribe at least one medicine.", true);
-      return;
-    }
 
     setLoading(savePrescriptionBtn, true);
     try {
@@ -1667,10 +2060,11 @@ if (savePrescriptionBtn) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: activeUser.uid,
+          consultation_id: activeVideoConsultation?.consultation_id || null,
           patient_name: patientName,
-          doctor_id: selectedDoctor.id,
-          doctor_name: selectedDoctor.name,
-          doctor_specialization: selectedDoctor.specialization,
+          doctor_id: activeVideoConsultation?.doctor_id || selectedDoctor.id,
+          doctor_name: activeVideoConsultation?.doctor_name || selectedDoctor.name,
+          doctor_specialization: activeVideoConsultation?.specialization || selectedDoctor.specialization,
           diagnosis: diagnosis,
           medicines: medicinesList,
           instructions: instructions
@@ -1680,6 +2074,10 @@ if (savePrescriptionBtn) {
       if (!res.ok) throw new Error(data.detail || "Failed to generate prescription");
 
       showToast(`✅ Digital Prescription ${data.prescription_id} issued successfully!`);
+      if (activeVideoConsultation) {
+        activeVideoConsultation.prescription_id = data.prescription_id;
+        localStorage.setItem(ACTIVE_VIDEO_CONSULTATION_KEY, JSON.stringify(activeVideoConsultation));
+      }
       if (prescriptionModal) prescriptionModal.style.display = "none";
 
       // Fetch newly created prescription to view printable sheet & offer pharmacy order
@@ -1716,11 +2114,9 @@ window.viewPrescriptionPrint = function (rx) {
   } else {
     medsHtml = `
       <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 10px 8px; font-weight: 700;">1. 💊 ${rx.medication || 'Dolo 650'}</td>
-        <td style="padding: 10px 8px;">${rx.dosage || '1 tablet (650mg)'}</td>
-        <td style="padding: 10px 8px;">Twice daily</td>
-        <td style="padding: 10px 8px;">5 days</td>
-        <td style="padding: 10px 8px; color: #64748b; font-size: 0.82rem;">After meals</td>
+        <td colspan="5" style="padding: 14px 8px; text-align: center; color: var(--text-mid);">
+          🌱 <em>Non-pharmacological supportive care & lifestyle management advised. No prescription medication required.</em>
+        </td>
       </tr>
     `;
   }
@@ -2292,4 +2688,547 @@ if (userInput) {
 }
 
 window.handleAISymptomCheck = handleAISymptomCheck;
+
+// ============================================================
+//  8. COMMON HEALTH PROBLEMS & MEDICINES REFERENCE DATABASE
+// ============================================================
+const HEALTH_CONDITIONS_DATA = [
+  {
+    id: "HC-01",
+    name: "Fever",
+    category: "Fever & Flu",
+    icon: "🌡️",
+    symptoms: ["Body temperature above 37.5°C (99.5°F)", "Chills and shivering", "Sweating & headache", "General weakness & muscle aches"],
+    causes: ["Viral infections (Cold, Flu)", "Bacterial infections", "Immunization / Vaccines", "Heat exhaustion"],
+    selfCare: ["Drink plenty of fluids (water, clear broths, ORS)", "Get adequate physical rest", "Wear light, breathable clothing", "Use lukewarm water sponge baths if uncomfortable"],
+    otcCategory: "Antipyretic / Analgesic",
+    genericMedicine: "Paracetamol / Acetaminophen",
+    precautions: ["Dosage depends strictly on age, weight, and medical history. Never exceed 4000mg/day for adults.", "Avoid taking multiple products containing paracetamol simultaneously.", "Avoid alcohol while taking paracetamol to prevent liver strain."],
+    whoAvoid: ["Individuals with severe liver disease or chronic alcoholism", "Persons with known hypersensitivity to paracetamol"],
+    whenDoctor: ["Fever exceeds 39.4°C (103°F) or lasts longer than 3 days", "Accompanied by severe headache, stiff neck, or skin rash"],
+    emergencyRedFlags: ["Difficulty breathing, chest pain, confusion, persistent vomiting, or seizures (Seek Immediate Emergency Care 🚨)"]
+  },
+  {
+    id: "HC-02",
+    name: "Common Cold",
+    category: "Fever & Flu",
+    icon: "🤧",
+    symptoms: ["Runny or stuffy nose", "Sneezing & watery eyes", "Mild throat irritation", "Low-grade fever & mild headache"],
+    causes: ["Rhinovirus or Enterovirus infection", "Seasonal temperature shifts", "Close contact with infected individuals"],
+    selfCare: ["Stay hydrated with warm water, tea, or soups", "Steam inhalation or saline nasal sprays", "Rest and sleep to boost immune recovery", "Use extra pillows to elevate head while sleeping"],
+    otcCategory: "Decongestants & Saline Nasal Sprays",
+    genericMedicine: "Saline Nasal Drops / Oxymetazoline (Short-term)",
+    precautions: ["Antibiotics DO NOT cure viral colds and should never be used without a prescription.", "Oral decongestants may elevate blood pressure."],
+    whoAvoid: ["Hypertension (high blood pressure) patients should avoid oral decongestants like pseudoephedrine without doctor advice.", "Children under 6 years without pediatric guidance"],
+    whenDoctor: ["Symptoms worsen after 7-10 days", "High fever or severe facial sinus pain develops"],
+    emergencyRedFlags: ["Shortness of breath, wheezing, or severe chest tightness"]
+  },
+  {
+    id: "HC-03",
+    name: "Cough",
+    category: "Fever & Flu",
+    icon: "🗣️",
+    symptoms: ["Dry tickly cough or wet phlegm cough", "Chest discomfort from coughing", "Throat irritation", "Mild hoarseness"],
+    causes: ["Post-viral airway irritation", "Upper respiratory tract infection", "Allergies or environmental irritants (smoke/dust)", "Acid reflux (GERD)"],
+    selfCare: ["Sip warm honey & lemon water (for adults and children > 1 yr)", "Use a cool-mist humidifier in your room", "Avoid exposure to tobacco smoke and pollution"],
+    otcCategory: "Expectorants / Mucolytics (Wet Cough) or Antitussives (Dry Cough)",
+    genericMedicine: "Guaifenesin (Wet) / Dextromethorphan (Dry Cough)",
+    precautions: ["Do not give honey to infants under 12 months (risk of botulism).", "Cough suppressants should not be used for heavy productive phlegm."],
+    whoAvoid: ["Asthma patients without doctor consultation", "Pregnant women without medical approval"],
+    whenDoctor: ["Cough lasts longer than 2-3 weeks", "Coughing up yellow/green phlegm with persistent fever"],
+    emergencyRedFlags: ["Coughing up blood, severe shortness of breath, or bluish lips"]
+  },
+  {
+    id: "HC-04",
+    name: "Headache",
+    category: "Pain & Cramps",
+    icon: "🧠",
+    symptoms: ["Dull aching pain on both sides of head (Tension)", "Throbbing pain on one side (Migraine)", "Sensitivity to light/sound", "Neck tightness"],
+    causes: ["Stress & mental fatigue", "Dehydration or skipped meals", "Eye strain from screens", "Lack of sleep or caffeine withdrawal"],
+    selfCare: ["Rest in a quiet, dark room", "Apply a cold or warm compress to forehead/neck", "Hydrate immediately with 1-2 glasses of water", "Limit screen time and practice neck stretches"],
+    otcCategory: "Analgesic / Pain Reliever",
+    genericMedicine: "Paracetamol / Ibuprofen (when appropriate)",
+    precautions: ["Avoid overuse of pain relievers (> 3 days/week) to prevent rebound medication-overuse headaches.", "Take NSAIDs like Ibuprofen with food."],
+    whoAvoid: ["Patients with stomach ulcers, kidney disease, or bleeding disorders should avoid NSAIDs (Ibuprofen).", "Third-trimester pregnancy (avoid NSAIDs)"],
+    whenDoctor: ["Headaches recur frequently (> 2 times a week)", "Headache accompanied by nausea, aura, or vision changes"],
+    emergencyRedFlags: ["Sudden 'thunderclap' severe headache, confusion, fainting, high fever, or arm numbness"]
+  },
+  {
+    id: "HC-05",
+    name: "Sore Throat",
+    category: "General",
+    icon: "🥛",
+    symptoms: ["Scratchy or painful feeling in throat", "Pain worsened by swallowing", "Swollen glands in neck", "Hoarse voice"],
+    causes: ["Viral pharyngitis (Cold/Flu viruses)", "Strep throat (Bacterial infection)", "Dry air or mouth breathing", "Acid reflux irritation"],
+    selfCare: ["Gargle with warm salt water (1/2 tsp salt in 1 glass water) 3-4 times daily", "Drink warm soothing liquids (herbal tea, warm broth)", "Use lozenges to keep throat moist"],
+    otcCategory: "Antiseptic Throat Gargles & Throat Lozenges",
+    genericMedicine: "Povidone-Iodine / Chlorhexidine Gargle & Amylmetacresol Lozenges",
+    precautions: ["Do not swallow iodine gargles.", "Avoid hard lozenges in young children due to choking risk."],
+    whoAvoid: ["Thyroid disorder patients should consult doctor before using iodine gargles.", "Severe allergy to lozenge ingredients"],
+    whenDoctor: ["Sore throat lasts longer than 4-5 days", "White patches visible on tonsils with high fever"],
+    emergencyRedFlags: ["Inability to swallow liquids or saliva, difficulty breathing, or drooling"]
+  },
+  {
+    id: "HC-06",
+    name: "Body Pain",
+    category: "Pain & Cramps",
+    icon: "🧍",
+    symptoms: ["Generalized dull muscular aching", "Joint stiffness", "Fatigue and heavy feeling in limbs"],
+    causes: ["Viral illnesses (Flu, Dengue, Viral fever)", "Unaccustomed physical exertion", "Poor posture or prolonged sitting", "Vitamin D / B12 deficiencies"],
+    selfCare: ["Warm baths or warm showers", "Gentle stretching and light walking", "Ensure 7-8 hours of sound sleep", "Maintain adequate hydration and balanced nutrition"],
+    otcCategory: "Analgesic / Muscle Relaxant Support",
+    genericMedicine: "Paracetamol / Topical Counter-irritants",
+    precautions: ["Rest is essential for recovery.", "Avoid heavy lifting or strenuous workouts while experiencing acute generalized pain."],
+    whoAvoid: ["Liver impairment patients (limit Paracetamol)", "Severe kidney impairment (avoid NSAIDs)"],
+    whenDoctor: ["Body pain persists over 5 days without improvement", "Accompanied by joint swelling, redness, or high fever"],
+    emergencyRedFlags: ["Inability to walk, sudden severe muscle weakness, or dark brown urine"]
+  },
+  {
+    id: "HC-07",
+    name: "Mild Allergy",
+    category: "General",
+    icon: "🌿",
+    symptoms: ["Itchy skin or mild hives/welts", "Sneezing & itchy runny nose", "Red itchy eyes", "Mild localized swelling"],
+    causes: ["Pollen, dust mites, or pet dander", "Certain food items or insect bites", "Cosmetics, detergents, or synthetic fabrics"],
+    selfCare: ["Identify and avoid known allergic triggers", "Wash face and hands after outdoor exposure", "Apply cold compresses to itchy skin areas"],
+    otcCategory: "Non-drowsy Antihistamines",
+    genericMedicine: "Cetirizine / Loratadine / Fexofenadine",
+    precautions: ["Some antihistamines may cause mild drowsiness; exercise caution when driving.", "Do not combine multiple antihistamines unless advised."],
+    whoAvoid: ["Severe renal impairment (requires dose adjustment)", "Glaucoma or prostate enlargement (consult doctor)"],
+    whenDoctor: ["Symptoms do not improve with OTC antihistamines", "Widespread skin rash develops"],
+    emergencyRedFlags: ["Swelling of lips, tongue, face, or throat, or difficulty breathing/wheezing (Anaphylaxis - Seek Emergency Care Immediately 🚨)"]
+  },
+  {
+    id: "HC-08",
+    name: "Acidity / Heartburn",
+    category: "Digestive",
+    icon: "🔥",
+    symptoms: ["Burning chest pain behind breastbone (Heartburn)", "Sour taste or acid regurgitation in mouth", "Upper abdominal bloating", "Discomfort after eating"],
+    causes: ["Spicy, oily, or fried foods", "Lying down immediately after eating", "Excessive caffeine, carbonated drinks, or smoking", "Overeating or stress"],
+    selfCare: ["Eat smaller, more frequent meals", "Remain upright for at least 2-3 hours after meals", "Elevate the head of your bed by 6 inches", "Avoid triggering foods (citrus, chocolate, heavy spices)"],
+    otcCategory: "Antacids & H2 Blockers / PPIs",
+    genericMedicine: "Magnesium Hydroxide + Aluminium Hydroxide Gel / Famotidine / Omeprazole",
+    precautions: ["Antacids provide fast temporary relief; do not rely on them long-term without investigating root causes.", "Separate antacids from other medications by 2 hours."],
+    whoAvoid: ["Chronic kidney disease (avoid high magnesium/aluminium antacids)", "Pregnant women should consult before taking systemic acid suppressants"],
+    whenDoctor: ["Symptoms occur > 2 times a week for more than 2 weeks", "Unexplained weight loss or difficulty swallowing food"],
+    emergencyRedFlags: ["Chest pain radiating to arm, jaw, or neck, accompanied by cold sweats or shortness of breath (Possible Cardiac Event 🚨)"]
+  },
+  {
+    id: "HC-09",
+    name: "Indigestion",
+    category: "Digestive",
+    icon: "🤢",
+    symptoms: ["Feeling uncomfortably full during or after meals", "Nausea & mild upper stomach discomfort", "Belching & gas", "Bloating"],
+    causes: ["Eating too fast or chewing insufficiently", "Greasy or heavy meals", "Emotional stress or anxiety", "Excessive alcohol or tobacco"],
+    selfCare: ["Chew food slowly and thoroughly", "Sip peppermint or ginger tea", "Avoid tight clothing around abdomen", "Take a gentle 10-minute walk after meals"],
+    otcCategory: "Digestive Enzymes & Anti-flatulents",
+    genericMedicine: "Fungal Diastase + Pepsin / Simethicone",
+    precautions: ["Simethicone helps break gas bubbles; it does not stop acid production.", "Avoid lying down flat right after eating."],
+    whoAvoid: ["Hypersensitivity to digestive enzymes", "Severe pancreatitis patients"],
+    whenDoctor: ["Indigestion persists for over a week", "Accompanied by persistent vomiting or dark tarry stools"],
+    emergencyRedFlags: ["Severe sharp abdominal pain, high fever, or vomiting blood"]
+  },
+  {
+    id: "HC-10",
+    name: "Diarrhea",
+    category: "Digestive",
+    icon: "🚰",
+    symptoms: ["Loose, watery bowel movements (> 3 times/day)", "Abdominal cramps", "Urgent need to evacuate", "Mild thirst"],
+    causes: ["Viral or bacterial gastroenteritis ('stomach flu')", "Contaminated food or water", "Food intolerances (e.g. lactose)", "Side effect of antibiotics"],
+    selfCare: ["Drink Oral Rehydration Solution (ORS) continuously after every loose stool", "Eat bland BRAT diet foods (Bananas, Rice, Applesauce, Toast)", "Avoid dairy, caffeine, spicy foods, and high-sugar juices"],
+    otcCategory: "Oral Rehydration Salts (ORS) & Probiotics",
+    genericMedicine: "WHO-Formula ORS & Sacchromyces Boulardii / Lactic Acid Bacillus",
+    precautions: ["PREVENT DEHYDRATION FIRST: ORS is essential for all ages.", "DO NOT use anti-motility drugs (like Loperamide) if fever or bloody stools are present."],
+    whoAvoid: ["Infants and elderly should be evaluated by a doctor promptly", "Severe kidney failure (monitor potassium in ORS)"],
+    whenDoctor: ["Diarrhea lasts more than 48 hours", "Signs of moderate dehydration (dry mouth, little urine, dizziness)"],
+    emergencyRedFlags: ["Blood or pus in stools, high fever (> 38.5°C), or signs of severe dehydration / confusion"]
+  },
+  {
+    id: "HC-11",
+    name: "Constipation",
+    category: "Digestive",
+    icon: "🧱",
+    symptoms: ["Fewer than 3 bowel movements per week", "Hard, dry, or lumpy stools", "Straining during defecation", "Feeling of incomplete evacuation"],
+    causes: ["Low dietary fiber intake", "Insufficient water intake", "Lack of physical activity", "Ignoring the urge to pass stool", "Certain medications (iron supplements, opioids)"],
+    selfCare: ["Increase dietary fiber (whole grains, fruits, vegetables, lentils)", "Drink 8-10 glasses of water daily", "Engage in daily exercise like walking or swimming", "Establish a regular bathroom routine"],
+    otcCategory: "Bulk-forming & Osmotic Laxatives",
+    genericMedicine: "Isabgol (Psyllium Husk) / Lactulose / Polyethylene Glycol (PEG)",
+    precautions: ["Always take Psyllium husk with a full glass of water to prevent intestinal blockage.", "Laxatives should be used short-term (under 1 week)."],
+    whoAvoid: ["Intestinal obstruction or acute inflammatory bowel disease", "Unexplained sudden severe abdominal pain"],
+    whenDoctor: ["Constipation lasts over 2 weeks despite dietary changes", "New onset constipation in individuals > 50 years"],
+    emergencyRedFlags: ["Severe abdominal pain, vomiting, inability to pass gas, or blood in stool"]
+  },
+  {
+    id: "HC-12",
+    name: "Nausea",
+    category: "Digestive",
+    icon: "🤢",
+    symptoms: ["Queasy stomach sensation", "Urge to vomit", "Excessive salivation", "Cold sweating"],
+    causes: ["Motion sickness or travel", "Indigestion or gastritis", "Early pregnancy (morning sickness)", "Migraine or stress"],
+    selfCare: ["Sip ginger tea or fresh lemon water", "Eat small bland snacks (crackers, dry toast)", "Get fresh air and avoid strong odors/perfumes", "Sit upright; avoid lying flat right after eating"],
+    otcCategory: "Antiemetics & Ginger Supplements",
+    genericMedicine: "Vitamin B6 (Pyridoxine) / Dimenhydrinate (Motion Sickness)",
+    precautions: ["Stay hydrated with small, frequent sips of water.", "Avoid greasy, fried, or overly sweet foods."],
+    whoAvoid: ["Dimenhydrinate should be used cautiously in glaucoma or urinary retention.", "Consult doctor before using any antiemetic during pregnancy"],
+    whenDoctor: ["Nausea persists over 48 hours preventing fluid intake", "Accompanied by persistent vomiting"],
+    emergencyRedFlags: ["Nausea with chest pain, severe headache, confusion, or stiff neck"]
+  },
+  {
+    id: "HC-13",
+    name: "Vomiting",
+    category: "Digestive",
+    icon: "🤮",
+    symptoms: ["Forced expulsion of stomach contents", "Nausea & abdominal cramping", "Sweating & pale skin"],
+    causes: ["Gastroenteritis (Food poisoning)", "Excessive alcohol consumption", "Pregnancy", "Motion sickness"],
+    selfCare: ["Do not eat solid food for 2-3 hours after vomiting", "Rest the stomach, then sip small amounts of ORS or water every 15 mins", "Reintroduce bland foods (rice, bananas, toast) slowly"],
+    otcCategory: "Oral Electrolytes & Probiotics",
+    genericMedicine: "Oral Rehydration Salts (ORS)",
+    precautions: ["Preventing dehydration is the primary goal.", "Do not force solid foods until vomiting subsides."],
+    whoAvoid: ["Inability to keep any liquids down for > 12 hours requires IV fluids in clinic"],
+    whenDoctor: ["Vomiting lasts more than 24 hours", "Inability to retain liquids for more than 12 hours"],
+    emergencyRedFlags: ["Vomiting blood or dark coffee-ground material, severe head injury prior, or extreme lethargy"]
+  },
+  {
+    id: "HC-14",
+    name: "Mild Dehydration",
+    category: "General",
+    icon: "💧",
+    symptoms: ["Increased thirst & dry mouth", "Dark yellow or concentrated urine", "Mild dizziness or lightheadedness upon standing", "Dry skin & fatigue"],
+    causes: ["Hot weather & sweating", "Inadequate fluid intake", "Vomiting, diarrhea, or fever", "Excessive exercise"],
+    selfCare: ["Drink WHO-Formula ORS, coconut water, or clear broth immediately", "Rest in a cool, shaded environment", "Sip liquids continuously in small amounts rather than chugging large volumes"],
+    otcCategory: "Oral Rehydration Salts (ORS)",
+    genericMedicine: "WHO Electrolyte ORS Powder",
+    precautions: ["Commercial sugary energy drinks or sodas are NOT proper oral rehydration solutions.", "ORS should be reconstituted in clean drinking water according to packet directions."],
+    whoAvoid: ["Severe kidney failure patients must monitor potassium and fluid intake under doctor supervision"],
+    whenDoctor: ["Dizziness or thirst persists despite 24 hours of ORS hydration", "No urination for over 8 hours"],
+    emergencyRedFlags: ["Extreme confusion, sunken eyes, rapid heart rate, fainting, or inability to stay awake (Severe Dehydration 🚨)"]
+  },
+  {
+    id: "HC-15",
+    name: "Menstrual Cramps",
+    category: "Pain & Cramps",
+    icon: "🩸",
+    symptoms: ["Throbbing or cramping pain in lower abdomen", "Dull ache in lower back & thighs", "Mild nausea or loose stools during period"],
+    causes: ["Prostaglandin release causing uterine muscle contraction", "Primary dysmenorrhea", "Secondary causes (Endometriosis, Fibroids - requires gynae check)"],
+    selfCare: ["Apply a heating pad or hot water bottle to lower abdomen", "Perform gentle pelvic stretches or yoga", "Warm baths and relaxation techniques", "Stay hydrated and reduce salt intake to decrease bloating"],
+    otcCategory: "Analgesic / Antispasmodic (NSAIDs)",
+    genericMedicine: "Ibuprofen / Mefenamic Acid (when prescribed/appropriate)",
+    precautions: ["Take pain relievers with meals to minimize stomach upset.", "Do not exceed recommended dose."],
+    whoAvoid: ["History of stomach ulcers or aspirin allergy", "Renal impairment"],
+    whenDoctor: ["Cramps suddenly worsen significantly in intensity", "Pain persists outside of menstrual period days"],
+    emergencyRedFlags: ["Abnormally heavy bleeding (soaking > 2 pads/hour for consecutive hours), severe fever, or sudden severe sharp pelvic pain"]
+  },
+  {
+    id: "HC-16",
+    name: "Muscle Pain",
+    category: "Pain & Cramps",
+    icon: "💪",
+    symptoms: ["Localized muscular soreness & tenderness", "Stiffness & tight muscle knots", "Pain aggravated by movement"],
+    causes: ["Delayed Onset Muscle Soreness (DOMS) after exercise", "Muscle strain or sprain", "Overuse or awkward posture"],
+    selfCare: ["Apply R.I.C.E protocol (Rest, Ice for first 48 hours, Compression, Elevation)", "Switch to warm compress after 48 hours to relax muscle", "Gentle passive stretching", "Stay hydrated"],
+    otcCategory: "Topical Pain Relief Gels & Oral Analgesics",
+    genericMedicine: "Diclofenac / Methyl Salicylate Gel & Paracetamol",
+    precautions: ["Wash hands after applying topical gels; avoid contact with eyes and broken skin.", "Do not apply heat pads directly over freshly applied topical ointments."],
+    whoAvoid: ["Hypersensitivity to topical NSAIDs", "Open wounds or eczema skin"],
+    whenDoctor: ["Pain does not improve after 7 days of self-care", "Accompanied by visible joint deformity or inability to bear weight"],
+    emergencyRedFlags: ["Inability to move limb, sudden severe swelling, or dark brown urine after extreme workout"]
+  },
+  {
+    id: "HC-17",
+    name: "Toothache",
+    category: "Pain & Cramps",
+    icon: "🦷",
+    symptoms: ["Sharp, throbbing, or constant tooth pain", "Swallowing or chewing discomfort", "Sensitivity to hot or cold foods", "Gum swelling"],
+    causes: ["Dental caries (Tooth decay)", "Gum infection (Gingivitis/Periodontitis)", "Cracked tooth or loose filling", "Impacted wisdom tooth"],
+    selfCare: ["Rinse mouth with warm salt water", "Floss gently to remove any trapped food debris", "Apply cold compress to outer cheek", "Avoid very hot, cold, or sugary foods"],
+    otcCategory: "Topical Analgesics & Oral Pain Relievers",
+    genericMedicine: "Clove Oil (Topical) / Paracetamol (Short-term pain control)",
+    precautions: ["OTC remedies provide TEMPORARY relief only; dental treatment is required to fix the underlying cause.", "Do not place aspirin tablets directly against gums (causes chemical burn)."],
+    whoAvoid: ["Undiagnosed allergy to clove oil", "Patients with severe bleeding disorders"],
+    whenDoctor: ["Schedule a dentist visit promptly for any tooth pain lasting > 1 day"],
+    emergencyRedFlags: ["Swelling extending to jaw, eye, or neck, difficulty breathing/swallowing, or high fever (Dental Abscess 🚨)"]
+  },
+  {
+    id: "HC-18",
+    name: "Minor Cuts / Wounds",
+    category: "General",
+    icon: "🩹",
+    symptoms: ["Small surface skin break", "Mild bleeding that stops with pressure", "Slight redness & tenderness around cut"],
+    causes: ["Kitchen knife slips, paper cuts, minor scrapes", "Abrasions from outdoor falls"],
+    selfCare: ["Wash hands thoroughly before touching wound", "Rinse wound under cool running water and mild soap", "Apply gentle direct pressure with clean gauze to stop bleeding", "Apply thin layer of petroleum jelly or antiseptic ointment and cover with sterile bandage"],
+    otcCategory: "Topical Antiseptics & Wound Dressings",
+    genericMedicine: "Povidone-Iodine Ointment / Petroleum Jelly & Sterile Bandages",
+    precautions: ["Change bandage daily or whenever it becomes wet or dirty.", "Ensure Tetanus vaccination status is up to date (within 5-10 years)."],
+    whoAvoid: ["Deep punctures, animal/human bites, or heavily contaminated wounds require medical care immediately."],
+    whenDoctor: ["Wound was caused by dirty/rusty object or animal bite", "Signs of infection develop (pus, increasing redness, warmth)"],
+    emergencyRedFlags: ["Uncontrolled spurting bleeding that does not stop after 10 minutes of direct pressure (Seek Emergency Medical Care 🚨)"]
+  },
+  {
+    id: "HC-19",
+    name: "Seasonal Allergies",
+    category: "Fever & Flu",
+    icon: "🌸",
+    symptoms: ["Repetitive sneezing bursts", "Itchy nose, roof of mouth, & throat", "Clear runny nose & nasal congestion", "Red, watery, itchy eyes (Allergic Conjunctivitis)"],
+    causes: ["Pollen from trees, grasses, and weeds", "Seasonal mold spores"],
+    selfCare: ["Check daily pollen counts and stay indoors on high pollen days", "Keep windows closed and use air conditioning with clean filters", "Rinse nasal passages with saline nasal spray or neti pot", "Shower and change clothes after returning from outdoors"],
+    otcCategory: "Antihistamines & Saline Nasal Sprays",
+    genericMedicine: "Fexofenadine / Loratadine & Saline Nasal Spray",
+    precautions: ["Antihistamines work best when taken regularly during allergy season.", "Saline sprays help flush out pollen without rebound risk."],
+    whoAvoid: ["Patients with severe kidney impairment (consult doctor for dosage)", "Children under 2 years without pediatric prescription"],
+    whenDoctor: ["Symptoms interfere significantly with sleep or work", "Complicated by sinus pain or wheezing"],
+    emergencyRedFlags: ["Difficulty breathing, chest tightness, or facial swelling"]
+  },
+  {
+    id: "HC-20",
+    name: "Common Flu-like Symptoms",
+    category: "Fever & Flu",
+    icon: "🤒",
+    symptoms: ["Sudden onset fever & chills", "Significant muscle & body aches", "Profound fatigue & weakness", "Dry cough, sore throat, & congestion"],
+    causes: ["Influenza viruses (Type A/B)", "Other acute respiratory viruses"],
+    selfCare: ["Strict bed rest to support immune function", "Maintain high fluid intake (water, ORS, warm broths)", "Isolate at home to prevent spreading virus to family and colleagues", "Use steam inhalation for congestion"],
+    otcCategory: "Antipyretic / Analgesics & Saline Sprays",
+    genericMedicine: "Paracetamol & Saline Nasal Drops",
+    precautions: ["Antibiotics have NO effect on flu viruses.", "High-risk groups (elderly, pregnant, chronic disease) should consult a doctor early for antiviral evaluation."],
+    whoAvoid: ["Children and teenagers recovering from flu should NEVER take Aspirin (risk of fatal Reye's Syndrome)."],
+    whenDoctor: ["Fever persists > 3-4 days", "High risk individuals (elderly, asthma, diabetes, heart disease)"],
+    emergencyRedFlags: ["Shortness of breath, persistent chest pain/pressure, confusion, dizziness, or inability to keep fluids down"]
+  }
+];
+
+// Health Library State
+let activeHealthCategory = "All";
+let activeHealthSearch = "";
+
+function renderHealthConditions() {
+  const grid = document.getElementById("healthConditionsGrid");
+  if (!grid) return;
+
+  const filtered = HEALTH_CONDITIONS_DATA.filter(item => {
+    // Category match
+    const matchCat = (activeHealthCategory === "All") || (item.category === activeHealthCategory);
+    
+    // Search match (name, symptoms, generic medicine, or causes)
+    const q = activeHealthSearch.trim().toLowerCase();
+    if (!q) return matchCat;
+
+    const matchName = item.name.toLowerCase().includes(q);
+    const matchCategory = item.category.toLowerCase().includes(q);
+    const matchMed = item.genericMedicine.toLowerCase().includes(q) || item.otcCategory.toLowerCase().includes(q);
+    const matchSymptoms = item.symptoms.some(s => s.toLowerCase().includes(q));
+    const matchCauses = item.causes.some(c => c.toLowerCase().includes(q));
+
+    return matchCat && (matchName || matchCategory || matchMed || matchSymptoms || matchCauses);
+  });
+
+  grid.innerHTML = "";
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; background: var(--bg); border-radius: var(--radius-lg); border: 1.5px dashed var(--border);">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.4rem;">No matching health conditions found</h3>
+        <p style="font-size: 0.9rem; color: var(--text-mid);">Try searching for terms like "fever", "headache", "cough", "paracetamol", or select a category above.</p>
+        <button class="btn btn-outline-nav" style="margin-top: 1rem;" onclick="window.resetHealthFilters()">Clear Filters</button>
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "health-card";
+    card.style.cssText = "background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.4rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 1rem; transition: box-shadow 0.2s, border-color 0.2s;";
+
+    card.innerHTML = `
+      <!-- Card Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.8rem;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.8rem; background: var(--bg); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);">${item.icon}</span>
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-dark); margin: 0;">${item.name}</h3>
+            <span style="font-size: 0.75rem; font-weight: 700; color: var(--blue); background: var(--blue-light); padding: 2px 8px; border-radius: 10px;">${item.category}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Symptoms -->
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-mid); margin-bottom: 0.4rem;">
+          🩺 Common Symptoms
+        </div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-dark); line-height: 1.5;">
+          ${item.symptoms.map(s => `<li>${s}</li>`).join("")}
+        </ul>
+      </div>
+
+      <!-- Causes -->
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-mid); margin-bottom: 0.4rem;">
+          🔍 Common Causes
+        </div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-mid); line-height: 1.5;">
+          ${item.causes.map(c => `<li>${c}</li>`).join("")}
+        </ul>
+      </div>
+
+      <!-- Basic Self Care -->
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 0.8rem 1rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #166534; margin-bottom: 0.4rem;">
+          🌱 Basic Self-Care &amp; General Care
+        </div>
+        <ul style="margin: 0; padding-left: 1.1rem; font-size: 0.85rem; color: #14532d; line-height: 1.45;">
+          ${item.selfCare.map(sc => `<li>${sc}</li>`).join("")}
+        </ul>
+      </div>
+
+      <!-- OTC Medicine Info -->
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 0.8rem 1rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: #1e40af; margin-bottom: 0.3rem;">
+          💊 Commonly Used OTC Medicine Category
+        </div>
+        <div style="font-size: 0.9rem; font-weight: 800; color: var(--blue); margin-bottom: 0.2rem;">
+          ${item.otcCategory}
+        </div>
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.4rem;">
+          Generic Reference: <strong>${item.genericMedicine}</strong>
+        </div>
+        <div style="font-size: 0.78rem; color: #1e3a8a; line-height: 1.4; border-top: 1px dashed #93c5fd; padding-top: 0.4rem;">
+          ⚠️ <em>Dosage depends on age, weight, medical history, pregnancy status, allergies, and existing drugs. Consult a healthcare provider before use. Never use antibiotics automatically.</em>
+        </div>
+      </div>
+
+      <!-- Precautions & Who Avoid -->
+      <div style="font-size: 0.84rem; color: var(--text-mid); line-height: 1.45; background: var(--bg); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+        <strong style="color: var(--text-dark);">⚠️ Important Precautions &amp; Who Should Avoid:</strong>
+        <ul style="margin: 0.3rem 0 0 0; padding-left: 1.1rem;">
+          ${item.precautions.map(p => `<li>${p}</li>`).join("")}
+          ${item.whoAvoid.map(w => `<li style="color:#b91c1c;"><strong>Caution:</strong> ${w}</li>`).join("")}
+        </ul>
+      </div>
+
+      <!-- Emergency Red Flags -->
+      <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: var(--radius-sm); padding: 0.8rem 1rem;">
+        <div style="font-size: 0.82rem; font-weight: 800; color: #dc2626; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 6px;">
+          🚨 Emergency Warning Signs (Seek Immediate Medical Care):
+        </div>
+        <ul style="margin: 0; padding-left: 1.1rem; font-size: 0.83rem; color: #991b1b; font-weight: 600; line-height: 1.45;">
+          ${item.emergencyRedFlags.map(e => `<li>${e}</li>`).join("")}
+        </ul>
+      </div>
+
+      <!-- Action Button -->
+      <div style="margin-top: auto; padding-top: 0.5rem;">
+        <button class="btn btn-cta" onclick="window.consultDoctorForCondition('${item.name.replace(/'/g, "\\'")}')" style="width: 100%; justify-content: center; padding: 0.75rem; font-size: 0.92rem;">
+          👨‍⚕️ Consult Doctor for ${item.name}
+        </button>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+function initHealthLibrary() {
+  const searchInput = document.getElementById("healthSearchInput");
+  const pillsContainer = document.getElementById("healthCategoryPills");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      activeHealthSearch = e.target.value;
+      renderHealthConditions();
+    });
+  }
+
+  if (pillsContainer) {
+    pillsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest("button.cat-pill");
+      if (!btn) return;
+
+      Array.from(pillsContainer.querySelectorAll("button.cat-pill")).forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      activeHealthCategory = btn.getAttribute("data-cat") || "All";
+      renderHealthConditions();
+    });
+  }
+
+  renderHealthConditions();
+}
+
+window.resetHealthFilters = function() {
+  activeHealthCategory = "All";
+  activeHealthSearch = "";
+  const searchInput = document.getElementById("healthSearchInput");
+  if (searchInput) searchInput.value = "";
+  const pillsContainer = document.getElementById("healthCategoryPills");
+  if (pillsContainer) {
+    Array.from(pillsContainer.querySelectorAll("button.cat-pill")).forEach(b => {
+      if (b.getAttribute("data-cat") === "All") b.classList.add("active");
+      else b.classList.remove("active");
+    });
+  }
+  renderHealthConditions();
+};
+
+window.consultDoctorForCondition = function(conditionName) {
+  const consultSec = document.getElementById("consult");
+  if (consultSec) consultSec.scrollIntoView({ behavior: "smooth" });
+
+  const docSearchInput = document.getElementById("docSearchInput");
+  if (docSearchInput) {
+    docSearchInput.value = conditionName;
+    docSearchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  if (window.showToast) {
+    window.showToast(`🔍 Filtered doctors for ${conditionName}. Click "Book Consultation" or "Start Video" to connect.`, false);
+  }
+};
+
+async function restoreActiveVideoConsultation() {
+  const activeUser = getActiveUser();
+  if (!activeUser) return;
+
+  try {
+    const stored = JSON.parse(localStorage.getItem(ACTIVE_VIDEO_CONSULTATION_KEY) || "null");
+    if (!stored || stored.user_id !== activeUser.uid) return;
+    const res = await fetch(apiUrl(`/api/consultations?user_id=${encodeURIComponent(activeUser.uid)}`));
+    if (!res.ok) return;
+    const consultations = await res.json();
+    const consultation = consultations.find(c => c.consultation_id === stored.consultation_id);
+    if (!consultation || consultation.consultation_type !== "Video Call") return;
+
+    activeConsultationId = consultation.consultation_id;
+    activeVideoConsultation = { ...stored, ...consultation };
+    selectedDoctor = {
+      id: consultation.doctor_id,
+      name: consultation.doctor_name,
+      specialization: consultation.specialization,
+      image: selectedDoctor.image
+    };
+    if (consultation.status === "Completed" && !stored.prescription_id) {
+      showToast("Completed consultation restored. Digital Prescription is ready.");
+      window.openCreatePrescriptionModal(
+        consultation.doctor_id,
+        consultation.doctor_name,
+        consultation.specialization,
+        `Video Consultation Assessment: Acute Illness & Treatment (${consultation.specialization})`
+      );
+    }
+  } catch (err) {
+    console.warn("Consultation restore notice:", err);
+  }
+}
+
+// Initialize Health Library on load
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    initHealthLibrary();
+    restoreActiveVideoConsultation();
+  });
+} else {
+  initHealthLibrary();
+  restoreActiveVideoConsultation();
+}
+
 
